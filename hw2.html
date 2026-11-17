@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>作业二 · 业务需求与相关方需求｜真空管道运输系统</title>
+<style>
+  /* ============================================================
+     作业二：BRS + StRS
+     框架：ISO/IEC/IEEE 29148:2018 表4-1（BRS）、表4-5（StRS）
+     ============================================================ */
+  :root {
+    --bg:    #04070d;
+    --bg-2:  #070c16;
+    --ink:   #eef3fa;
+    --dim:   #a9b7ca;
+    --muted: #74829a;
+    --blue:  #5b9dff;
+    --cyan:  #6fd3e6;
+    --green: #5fd0a8;
+    --warm:  #e0a15a;
+    --line:  rgba(238, 243, 250, 0.10);
+    --line-2:rgba(238, 243, 250, 0.22);
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI",
+            "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    --mono: ui-monospace, SFMono-Regular, Consolas, "Cascadia Mono", monospace;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 62px; }
+  body { margin: 0; background: var(--bg); color: var(--dim); font-family: var(--sans);
+         line-height: 1.9; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+
+  .aura {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(65% 40% at 50% -8%, rgba(91,157,255,.18) 0%, transparent 70%),
+      radial-gradient(45% 35% at 88% 8%, rgba(111,211,230,.09) 0%, transparent 70%),
+      linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 100%);
+  }
+  .aura::after {
+    content: ""; position: absolute; inset: 0;
+    background-image:
+      linear-gradient(to right, rgba(238,243,250,.032) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(238,243,250,.032) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(110% 80% at 50% 0%, #000 25%, transparent 80%);
+    -webkit-mask-image: radial-gradient(110% 80% at 50% 0%, #000 25%, transparent 80%);
+  }
+
+  .nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+    display: flex; align-items: center; gap: 14px;
+    height: 58px; padding: 0 clamp(14px, 3.4vw, 40px);
+    background: rgba(4,7,13,.84); border-bottom: 1px solid var(--line);
+    -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  }
+  .brand { display: flex; align-items: baseline; gap: 10px; color: var(--ink); text-decoration: none; white-space: nowrap; flex: none; }
+  .brand b { font-size: 13.5px; font-weight: 600; letter-spacing: .06em; }
+  .brand span { font-family: var(--mono); font-size: 10px; letter-spacing: .16em; color: var(--muted); }
+  .home { flex: none; padding: 5px 12px; font-size: 11.5px; color: var(--cyan); text-decoration: none;
+          border: 1px solid rgba(111,211,230,.4); border-radius: 2px; white-space: nowrap; transition: background .2s, border-color .2s; }
+  .home:hover { background: rgba(111,211,230,.14); border-color: rgba(111,211,230,.75); }
+  .nav ul { display: flex; align-items: center; gap: clamp(9px, 1.6vw, 20px); margin: 0 0 0 auto; padding: 0;
+            list-style: none; overflow-x: auto; scrollbar-width: none; }
+  .nav ul::-webkit-scrollbar { display: none; }
+  .nav a.item { position: relative; display: block; padding: 6px 0; font-size: 12px; color: var(--muted);
+                text-decoration: none; white-space: nowrap; transition: color .2s; }
+  .nav a.item::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1.5px;
+                background: var(--blue); transform: scaleX(0); transform-origin: left; transition: transform .25s; }
+  .nav a.item:hover { color: var(--dim); }
+  .nav a.item.active { color: var(--ink); }
+  .nav a.item.active::after { transform: scaleX(1); }
+
+  .wrap { position: relative; z-index: 1; max-width: 1000px; margin: 0 auto; padding: 0 clamp(16px, 3.6vw, 30px); }
+
+  .hero { padding: clamp(92px, 14vh, 150px) 0 clamp(38px, 6vh, 60px); }
+  .eyebrow { margin: 0 0 20px; font-family: var(--mono); font-size: 10.5px; letter-spacing: .30em; color: var(--cyan); }
+  h1 { margin: 0; font-size: clamp(25px, 4vw, 42px); line-height: 1.45; font-weight: 600; color: var(--ink); text-wrap: balance; }
+  h1 .accent { color: var(--blue); }
+  .lede { margin: 22px 0 0; max-width: 40em; font-size: 15.5px; line-height: 2; color: #c3cedc; }
+  .facts { display: flex; flex-wrap: wrap; gap: 10px 34px; margin: 32px 0 0; padding: 16px 0 0;
+           border-top: 1px solid var(--line); list-style: none; font-family: var(--mono);
+           font-size: 10.5px; letter-spacing: .10em; color: var(--muted); }
+  .facts b { color: var(--ink); font-weight: 500; margin-left: 8px; }
+
+  section.sec { padding: clamp(46px, 8vh, 82px) 0; border-top: 1px solid var(--line); scroll-margin-top: 60px; }
+  .label { display: flex; align-items: center; gap: 12px; margin: 0 0 10px; font-family: var(--mono);
+           font-size: 10.5px; letter-spacing: .26em; color: var(--muted); }
+  .label i { font-style: normal; color: var(--blue); }
+  h2 { margin: 0 0 8px; font-size: clamp(21px, 3vw, 29px); font-weight: 600; color: var(--ink); text-wrap: balance; }
+  .sub { margin: 0 0 20px; font-size: 13px; color: var(--muted); }
+  .sec > p { max-width: 44em; margin: 0 0 1em; font-size: 14.5px; line-height: 2; }
+  .sec > p strong { color: var(--ink); font-weight: 600; }
+
+  h3 { margin: 30px 0 10px; font-size: 15.5px; font-weight: 600; color: var(--ink); letter-spacing: .03em; }
+  h3 .no { font-family: var(--mono); font-size: 12px; color: var(--blue); margin-right: 10px; font-weight: 400; }
+  h4 { margin: 20px 0 6px; font-size: 14px; font-weight: 600; color: var(--cyan); }
+
+  ul.pts { margin: 10px 0 0; padding: 0; list-style: none; }
+  ul.pts li { position: relative; margin: 0 0 9px; padding-left: 20px; font-size: 14px; line-height: 1.95; }
+  ul.pts li::before { content: ""; position: absolute; left: 0; top: .78em; width: 7px; height: 1px; background: var(--cyan); }
+  ul.pts li b { color: var(--ink); font-weight: 600; }
+
+  .tbl { margin: 18px 0 0; overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 620px; }
+  caption { caption-side: top; text-align: left; padding-bottom: 8px; font-family: var(--mono);
+            font-size: 10px; letter-spacing: .12em; color: var(--muted); }
+  th, td { padding: 10px 12px 10px 0; text-align: left; vertical-align: top;
+           border-bottom: 1px solid var(--line); line-height: 1.75; }
+  th { font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; color: var(--muted);
+       font-weight: 400; white-space: nowrap; }
+  td b { color: var(--ink); font-weight: 600; }
+  td.id { font-family: var(--mono); font-size: 11px; color: var(--blue); white-space: nowrap; }
+
+  .note { margin: 22px 0 0; padding: 14px 18px; border-left: 2px solid var(--blue);
+          background: rgba(91,157,255,.06); font-size: 13px; line-height: 1.9; color: #bcc9da; }
+  .note b { color: var(--ink); }
+  .note.warn { border-left-color: var(--warm); background: rgba(224,161,90,.07); }
+  .cite { margin: 8px 0 0; font-size: 11.5px; color: #7d8ba0; line-height: 1.7; }
+
+  figure.fig { margin: 22px 0 0; padding: 18px; border: 1px solid var(--line-2); background: rgba(255,255,255,.02); }
+  figure.fig svg { display: block; width: 100%; height: auto; }
+  figcaption { margin-top: 12px; font-size: 11.5px; line-height: 1.75; color: var(--muted); }
+
+  .bib { margin: 18px 0 0; padding-left: 24px; font-size: 12.5px; line-height: 1.95; }
+  .bib li { margin-bottom: 9px; }
+  .bib li::marker { color: var(--blue); font-family: var(--mono); font-size: 11px; }
+  .bib a { color: #8fb0d8; text-decoration: none; border-bottom: 1px dotted rgba(143,176,216,.5); word-break: break-all; }
+  .bib a:hover { color: #cfe3ff; }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin: 18px 0 0; }
+  .card { padding: 16px 18px; border: 1px solid var(--line); background: rgba(255,255,255,.022); }
+  .card h4 { margin: 0 0 5px; font-size: 12.5px; color: var(--cyan); }
+  .card p { margin: 0; font-size: 12.5px; line-height: 1.8; }
+
+  .end { position: relative; z-index: 1; padding: 42px 0 52px; border-top: 1px solid var(--line);
+         font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em; color: var(--muted); }
+  .end p { margin: 0 0 8px; }
+  .end a { color: var(--blue); text-decoration: none; }
+  .end a:hover { color: var(--ink); }
+
+  a:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .reveal { opacity: 0; transform: translateY(12px); transition: opacity .6s ease, transform .6s cubic-bezier(.22,.68,.2,1); }
+    .reveal.in { opacity: 1; transform: none; }
+  }
+  @media (max-width: 760px) {
+    .nav { height: auto; padding: 9px 12px; flex-wrap: wrap; gap: 8px; }
+    .brand b { font-size: 12.5px; }
+    .nav ul { width: 100%; }
+    .nav a.item { font-size: 11.5px; }
+    section.sec { scroll-margin-top: 96px; }
+  }
+</style>
+</head>
+<body>
+  <div class="aura" aria-hidden="true"></div>
+
+  <nav class="nav" aria-label="章节导航">
+    <a class="brand" href="#top"><b>作业二</b><span>BRS / StRS</span></a>
+    <a class="home" href="./project.html">← 项目主页</a>
+    <ul>
+      <li><a class="item" href="#brief">作业说明</a></li>
+      <li><a class="item" href="#brs">业务需求</a></li>
+      <li><a class="item" href="#conops">运营概念</a></li>
+      <li><a class="item" href="#opscon">运行概念</a></li>
+      <li><a class="item" href="#stake">相关方</a></li>
+      <li><a class="item" href="#strs">相关方需求</a></li>
+      <li><a class="item" href="#tradeoff">冲突权衡</a></li>
+      <li><a class="item" href="#bib">参考资料</a></li>
+    </ul>
+  </nav>
+
+  <header class="hero" id="top">
+    <div class="wrap">
+      <p class="eyebrow">作业二 · 概念定义阶段</p>
+      <h1>业务需求与相关方需求定义<br /><span class="accent">BRS · StRS</span></h1>
+      <p class="lede">
+        对象系统：真空管道运输系统。本页按 ISO/IEC/IEEE 29148：2018 的表4-1（BRS 范例）
+        与表4-5（StRS 范例）组织，重点落在业务/任务需求、ConOps、OpsCon、相关方列表与相关方需求。
+      </p>
+      <ul class="facts">
+        <li>阶段<b>概念定义</b></li>
+        <li>依据<b>29148:2018 表4-1 / 表4-5</b></li>
+        <li>过程<b>业务分析 → 相关方需求</b></li>
+      </ul>
+    </div>
+  </header>
+
+  <div class="wrap">
+
+    <!-- 00 作业说明 -->
+    <section class="sec" id="brief">
+      <p class="label"><i>00</i> 作业说明 / BRIEF</p>
+      <h2>这份文档要回答什么</h2>
+      <p>
+        概念阶段不解决"怎么做"，只解决<strong>为什么做、为谁做、做到什么算成功</strong>。
+        因此本页不做详细设计，只产出两份需求规格：描述组织为什么启动项目的 <b>BRS</b>，
+        以及从相关方视角定义需求的 <b>StRS</b>。
+      </p>
+
+      <div class="cards">
+        <div class="card">
+          <h4>依据的来源</h4>
+          <p>框架取自《第4章 概念定义》中的表4-1（BRS）与表4-5（StRS），方法取自 4.1 业务或使命分析、4.2 相关方需要与需求定义。</p>
+        </div>
+        <div class="card">
+          <h4>两份文档的分工</h4>
+          <p>BRS 站在业务管理层面，回答"组织为什么要变"；StRS 站在业务运行层面，回答"相关方要什么"。</p>
+        </div>
+        <div class="card">
+          <h4>本页的重点</h4>
+          <p>业务/任务需求、ConOps 与 OpsCon 的区分、相关方清单、相关方需求条目，以及它们之间的冲突。</p>
+        </div>
+      </div>
+
+      <p class="note">
+        <b>关于目录结构</b>：下面第 01–03 节是 BRS 与两个"概念"的展开，第 04–05 节是相关方与 StRS，
+        第 06 节记录这一阶段真正要交出去的东西——<b>冲突清单</b>，它才是后续权衡研究的输入。
+      </p>
+
+      <p class="cite">
+        依据来源：[1] ISO/IEC/IEEE 29148:2018（需求工程过程标准，表4-1 与表4-5 的出处）；
+        [2] ISO/IEC/IEEE 15288:2023（系统生存周期过程，业务或使命分析过程的活动划分）；
+        [3] 郭宝柱等《系统工程——基于国际标准过程的研究与实践》第4章。条目见文末「参考资料」。
+      </p>
+    </section>
+
+    <!-- 01 BRS -->
+    <section class="sec" id="brs">
+      <p class="label"><i>01</i> BRS 业务需求规格说明</p>
+      <h2>业务需求规格说明</h2>
+      <p class="sub">按表4-1 的八章轮廓展开，逐条给出本项目的内容。</p>
+
+      <h3><span class="no">1</span>简介</h3>
+      <h4>1.1 业务目的</h4>
+      <p>
+        现存的洲际运输体系在速度、容量与能耗上已经接近天花板：航空受限于机场吞吐与碳约束，
+        海运受限于时效，陆路受限于地理。组织寻求一种<strong>地表尺度上的新运输骨干</strong>，
+        并希望这条骨干同时承担能源、科研与居住功能，把一次性的巨型投资摊到多种收益上。
+      </p>
+      <h4>1.2 业务范围</h4>
+      <ul class="pts">
+        <li>业务域：洲际高速运输、沿线能源输配、科研实验平台、轨道延伸运输。</li>
+        <li>范围内：干线环线与分支线的规划、建设、运营与维护；跨洲协调与标准制定。</li>
+        <li>范围外：具体线位设计、车辆详细设计、单站建筑设计（属方案域，不在概念阶段）。</li>
+      </ul>
+      <h4>1.3 业务概况</h4>
+      <p>
+        业务由四张网叠加构成：<b>运输网</b>（干线 + 分支）、<b>能源网</b>（沿线发电与储能）、
+        <b>科研网</b>（长距离真空与超导实验）、<b>管控网</b>（调度、真空监测、应急隔离）。
+        四网共用同一条物理管廊，是这套业务能摊薄成本的根本原因。
+      </p>
+      <h4>1.4 定义</h4>
+      <ul class="pts">
+        <li><b>ConOps</b>（运营概念）：组织层面，描述组织打算如何运作，涉及多个系统的组合。</li>
+        <li><b>OpsCon</b>（运行概念）：系统层面，描述某个系统做什么、为什么，不涉及怎么做。</li>
+        <li><b>BRS / StRS</b>：业务需求规格说明 / 相关方需求规格说明，分别对应组织层与运行层。</li>
+        <li><b>SoS</b>（体系）：由多个可独立运行的系统组成的集合，整体呈现涌现能力。</li>
+      </ul>
+      <h4>1.5 主要相关方</h4>
+      <p>七类相关方的完整清单与权力—利益分析见第 04 节，此处只列类别：主权政府与出资方、直接用户、运营维护方、监管与标准机构、受影响第三方、技术供应链、远期太空相关方。</p>
+
+      <h3><span class="no">2</span>参考文献</h3>
+      <ul class="pts">
+        <li>ISO/IEC/IEEE 29148:2018《系统和软件工程 生存周期过程 需求工程》。</li>
+        <li>ISO/IEC/IEEE 15288:2023《系统与软件工程 系统生存周期过程》。</li>
+        <li>郭宝柱等.《系统工程——基于国际标准过程的研究与实践》第 4 章 概念定义。</li>
+        <li>刘慈欣《地球大炮》（构想灵感来源，非技术依据）。</li>
+      </ul>
+
+      <h3><span class="no">3</span>业务管理需求</h3>
+      <h4>3.1 业务环境</h4>
+      <ul class="pts">
+        <li><b>技术环境</b>：磁浮、真空、盾构、超导均有工程基础，但没有一次被放到万公里尺度。</li>
+        <li><b>法规环境</b>：真空压力容器、载人运输、跨境通关、海底施工与空间资产权责分属不同法域。</li>
+        <li><b>地缘环境</b>：环线必然穿越多国，线路与调度主权是首要谈判议题。</li>
+        <li><b>生态环境</b>：地表与海底扰动不可消除，只能控制与可逆化。</li>
+        <li><b>经济环境</b>：单公里造价为地铁量级以上，回收周期跨代。</li>
+      </ul>
+      <h4>3.2 使命、目的与目标</h4>
+      <div class="tbl">
+        <table>
+          <caption>使命—目的—目标三层，附成功度量</caption>
+          <thead><tr><th>层级</th><th>内容</th><th>成功度量</th></tr></thead>
+          <tbody>
+            <tr><td><b>使命</b></td><td>在地表尺度重建运输骨干，并把它作为后续空间开发的起跳结构</td><td>骨干线贯通并稳定运营</td></tr>
+            <tr><td><b>目的</b></td><td>把洲际行程压缩到小时级；为沿线与轨道提供可承载的结构</td><td>端到端时间、结构承载力</td></tr>
+            <tr><td><b>目标</b></td><td>一期示范段跑通真空+悬浮+气闸+隔离闸门；三期实现跨洲运营</td><td>各期验证门限达成率</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h4>3.3 业务模型</h4>
+      <p>
+        采用<strong>大洲牵头制</strong>：各洲由一到两个牵头方负责本洲段的融资、建设与运营，
+        洲际设中转站完成换乘与海关；跨洲管委会掌握接口标准与联合调度。
+        收益来自四部分：旅游与客运票务、夜间货运、能源管廊租用、科研平台使用。
+      </p>
+      <h4>3.4 信息环境</h4>
+      <ul class="pts">
+        <li>统一接口标准库（管径、真空度、供电制式、舱体接口、救援规范）。</li>
+        <li>跨洲调度信息共享（时刻、真空状态、闸门状态、事故通报）。</li>
+        <li>分段资产与维护记录（按管段编号追溯，用于寿命与责任划分）。</li>
+      </ul>
+
+      <h3><span class="no">4</span>业务运行需求</h3>
+      <h4>4.1 业务过程</h4>
+      <ul class="pts">
+        <li><b>规划过程</b>：选线、环评、跨境协定、分期立项。</li>
+        <li><b>建设过程</b>：盾构掘进、管节铺设、设备安装、分段验收。</li>
+        <li><b>运营过程</b>：客运（日间）、货运（夜间）、科研（预约窗口）。</li>
+        <li><b>维护过程</b>：天窗检修、闸门与泵组更换、管段复压。</li>
+        <li><b>退役过程</b>：管段封存或拆除、生态恢复。</li>
+      </ul>
+      <h4>4.2 业务运营策略与规则</h4>
+      <ul class="pts">
+        <li><b>停站规则</b>：大洲站每洲 1–2 座，站间距决定平均速度上限。</li>
+        <li><b>时段规则</b>：日间客运优先，夜间货运优先，科研占用预约窗口。</li>
+        <li><b>隔离规则</b>：单段失压立即封段，其余段维持运行，不整线停运。</li>
+        <li><b>票价规则</b>：观光段、通勤段、货运分档计价。</li>
+      </ul>
+      <h4>4.3 业务运行约束</h4>
+      <ul class="pts">
+        <li>单公里造价与总投资上限（量级约束，非精确预算；口径见 [5]）。</li>
+        <li>生态扰动不得超过环评设定的可逆阈值。</li>
+        <li>不得单方面改变已互认的核心接口标准。</li>
+        <li>运营安全指标须满足载人运输准入要求。</li>
+      </ul>
+      <h4>4.4 业务运行质量</h4>
+      <ul class="pts">
+        <li>准点率、可用率、平均无故障里程作为一级运营指标。</li>
+        <li>失效时"降级而非瘫痪"：任一段可独立隔离。</li>
+        <li>救援响应时间按地下 / 海底 / 轨道三类场景分别设定。</li>
+      </ul>
+      <h4>4.5 业务结构</h4>
+      <p>三层结构：<b>跨洲管委会</b>（标准与联合调度）→ <b>大洲运营商</b>（本洲段建设与运营）→ <b>站点运营单元</b>（站内服务与接驳）。</p>
+
+      <h3><span class="no">5</span>提案系统初步运行概念</h3>
+      <h4>5.1 初步运行概念</h4>
+      <p>
+        系统以"环线 + 分支"的拓扑提供运输能力：干线管内维持真空，舱体悬浮运行；
+        车站以气闸与真空段隔离；管段之间设隔离闸门。系统同时对外提供管廊（能源）、
+        实验窗口（科研）与结构接口（后续轨道延伸）。
+      </p>
+      <h4>5.2 初步运行场景</h4>
+      <ul class="pts">
+        <li><b>场景 A · 洲际客运</b>：站内安检 → 气闸进舱 → 加速段 → 干线巡航 → 目标站减速 → 出站。</li>
+        <li><b>场景 B · 夜间货运</b>：集装箱装舱 → 低峰时段发车 → 直达货运站 → 分拨。</li>
+        <li><b>场景 C · 科研窗口</b>：预约时段停运客运 → 开放真空段 → 实验载荷进出 → 恢复运营。</li>
+      </ul>
+
+      <h3><span class="no">6</span>其他初步生存周期概念</h3>
+      <ul class="pts">
+        <li><b>采办</b>：按模块招标，管节、泵组、闸门、定子段分别定标。</li>
+        <li><b>部署</b>：分期建设，示范段→区域线→洲际线→环线。</li>
+        <li><b>支持</b>：沿线设维护基地，备件按模块化库存。</li>
+        <li><b>弃置</b>：管段可封存、可拆除，拆后恢复地表或海床。</li>
+      </ul>
+
+      <h3><span class="no">7</span>项目约束</h3>
+      <ul class="pts">
+        <li>概念阶段周期与交付节点由课程安排约束（本期为 2026-11-18）。</li>
+        <li>人力与算力有限，只能做定性论证与量级估算，不做精确仿真。</li>
+        <li>资料可得性受限，部分数据取公开报道的约数。</li>
+      </ul>
+    </section>
+
+    <!-- 02 ConOps -->
+    <section class="sec" id="conops">
+      <p class="label"><i>02</i> ConOps 运营概念（组织层）</p>
+      <h2>组织打算怎么用这套系统</h2>
+      <p>
+        ConOps 描述的是<strong>组织层面的运作意图</strong>，它面对的是"多个系统组成的组合"，
+        单个系统在其中只是一个黑盒。所以这一节不讨论管道怎么造，只讨论组织为什么要它、拿它做什么。
+      </p>
+
+      <h3>本项目的 ConOps</h3>
+      <ul class="pts">
+        <li><b>目标</b>：让跨洲流动变成常态化、可负担的日常行为，而不是少数人的远行。</li>
+        <li><b>目的</b>：以一条骨干线带动沿线与轨道两侧的产业和聚居，形成新的经济走廊。</li>
+        <li><b>期望</b>：运输、能源、科研、居住四类活动共用一条物理骨架，各自独立运营、共享标准。</li>
+        <li><b>职责划分</b>：牵头方管本洲段，管委会管接口与联调，监管方管准入与安全底线。</li>
+        <li><b>运行与支持环境</b>：地下、海底、极区、跨境；维护依赖沿线基地与模块化备件。</li>
+      </ul>
+
+      <div class="tbl">
+        <table>
+          <caption>ConOps 与 OpsCon 的区别（本章 4.1.2 的核心辨析）</caption>
+          <thead><tr><th>维度</th><th>ConOps 运营概念</th><th>OpsCon 运行概念</th></tr></thead>
+          <tbody>
+            <tr><td><b>层次</b></td><td>组织层（多系统组合）</td><td>系统层（单个系统）</td></tr>
+            <tr><td><b>回答</b></td><td>组织为什么这样运作</td><td>系统做什么、为什么</td></tr>
+            <tr><td><b>关系</b></td><td>多对多：体系内各系统交互</td><td>一对多：以目标系统为核心对外交互</td></tr>
+            <tr><td><b>本项目对应</b></td><td>四网叠加、大洲牵头、跨洲联调</td><td>真空管道运输系统自身的运行场景</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="cite">辨析依据：[3]《第4章 概念定义》4.1.2 节「ConOps 与 OpsCon 辨析」；标准定义见 [1]。</p>
+    </section>
+
+    <!-- 03 OpsCon -->
+    <section class="sec" id="opscon">
+      <p class="label"><i>03</i> OpsCon 运行概念（系统层）</p>
+      <h2>这个系统做什么、为什么</h2>
+      <p>
+        OpsCon 只描述"做什么"与"为什么"，不描述"怎么做"。它从用户视角给出系统的运行环境、
+        运行模式与关键场景，是后续功能需求与确认测试的来源。
+      </p>
+
+      <h3>运行环境</h3>
+      <ul class="pts">
+        <li><b>物理环境</b>：地下浅埋段、海底段、极区段；管内为真空，管外为地层或海水。</li>
+        <li><b>接口环境</b>：与既有铁路、航空、海运的接驳；与电网、氢网的能源接口。</li>
+        <li><b>制度环境</b>：跨境运行，需同时满足多国监管与统一标准。</li>
+      </ul>
+
+      <h3>运行模式与状态</h3>
+      <div class="tbl">
+        <table>
+          <caption>系统运行模式（对应 BRS 4.4 与 StRS 4.4）</caption>
+          <thead><tr><th>模式</th><th>触发条件</th><th>系统行为</th></tr></thead>
+          <tbody>
+            <tr><td><b>正常运营</b></td><td>真空度、闸门、供电均正常</td><td>按时刻表发车，客运/货运/科研按窗口切换</td></tr>
+            <tr><td><b>降级运营</b></td><td>单段真空度下降或设备故障</td><td>封段、绕行或限速，其余段继续运行</td></tr>
+            <tr><td><b>隔离检修</b></td><td>计划性天窗</td><td>该段闸门闭合、复压、人员进入</td></tr>
+            <tr><td><b>应急处置</b></td><td>破管、失压、火灾、地震</td><td>封段、疏散、救援通道开启</td></tr>
+            <tr><td><b>停运</b></td><td>重大灾害或全線检修</td><td>全段复压，转为维护状态</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>关键运行场景</h3>
+      <div class="tbl">
+        <table>
+          <caption>场景清单（不含设计细节）</caption>
+          <thead><tr><th>编号</th><th>场景</th><th>系统需要具备的能力</th></tr></thead>
+          <tbody>
+            <tr><td class="id">SC-01</td><td>洲际客运直达</td><td>停站极少、平稳加减速、站内快速换乘</td></tr>
+            <tr><td class="id">SC-02</td><td>夜间货运</td><td>大载重、低时段占用、与客运共用管道</td></tr>
+            <tr><td class="id">SC-03</td><td>科研窗口运行</td><td>可封闭的真空实验段、低振动环境</td></tr>
+            <tr><td class="id">SC-04</td><td>单段失压</td><td>快速检出、闸门闭合、相邻段不受影响</td></tr>
+            <tr><td class="id">SC-05</td><td>地震与地层位移</td><td>柔性接头吸收位移、结构不整体失效</td></tr>
+            <tr><td class="id">SC-06</td><td>轨道接驳（远期）</td><td>载荷出管、末级入轨、轨道站接收</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note">
+        <b>边界说明</b>：SC-06 属于延伸构想，本阶段只作为衍生备选方案登记，不主导主系统需求。
+      </p>
+    </section>
+
+    <!-- 04 相关方 -->
+    <section class="sec" id="stake">
+      <p class="label"><i>04</i> 相关方分析 / STAKEHOLDERS</p>
+      <h2>谁会影响系统，谁会被系统影响</h2>
+      <p>
+        概念阶段的相关方分析，目的不是敲定方案，而是<strong>把冲突诉求摆到桌面上</strong>。
+        下表按七类归档，并标注各自的权力、利益与这一阶段必须敲定的事。
+      </p>
+
+      <div class="tbl">
+        <table>
+          <caption>相关方清单（权力 / 利益 / 概念阶段重点）</caption>
+          <thead><tr><th>类别</th><th>代表</th><th>权力</th><th>利益</th><th>核心关切</th></tr></thead>
+          <tbody>
+            <tr><td rowspan="2"><b>一 · 决策与出资</b></td><td>各国政府、大洲联盟</td><td>高</td><td>高</td><td>主权、边境管控、海关权责、审批权、调度主权</td></tr>
+            <tr><td>主权基金、跨洲投资机构</td><td>高</td><td>高</td><td>回报周期、债务风险、分期投入节奏、收益分摊</td></tr>
+            <tr><td rowspan="3"><b>二 · 直接用户</b></td><td>客运乘客（含观光）</td><td>中</td><td>高</td><td>安全、加速度、票价、行程时间、救援方案</td></tr>
+            <tr><td>货运客户</td><td>中</td><td>高</td><td>准点率、载重、舱位优先级、夜间调度</td></tr>
+            <tr><td>科研用户</td><td>中</td><td>中</td><td>真空可用性、振动与电磁噪声指标</td></tr>
+            <tr><td rowspan="3"><b>三 · 运营维护</b></td><td>大洲运营商</td><td>中</td><td>高</td><td>运维成本、检修天窗、备件、闸门与泵组故障率</td></tr>
+            <tr><td>应急救援团队</td><td>中</td><td>高</td><td>失压救援窗口、闸门救援接口、逃生舱</td></tr>
+            <tr><td>能源运营商</td><td>中</td><td>中</td><td>巨量用电、负荷波动、共廊接口</td></tr>
+            <tr><td rowspan="2"><b>四 · 监管标准</b></td><td>交通与特种设备监管</td><td>高</td><td>中</td><td>压力容器规范、磁浮安全标准、载人准入</td></tr>
+            <tr><td>海洋、地质、生态主管部门</td><td>高</td><td>中</td><td>海底扰动、地层升温、沉降、栖息地切割</td></tr>
+            <tr><td rowspan="3"><b>五 · 受影响第三方</b></td><td>沿线居民、渔场、沿海社区</td><td>中</td><td>高</td><td>征地、噪声、渔业损失、次生灾害</td></tr>
+            <tr><td>既有交通运营商（航空/海运/高铁）</td><td>中</td><td>中</td><td>市场竞争、补贴公平、路网互通</td></tr>
+            <tr><td>环保组织、气候研究机构</td><td>低</td><td>高</td><td>全生命周期碳排、热污染、累积生态效应</td></tr>
+            <tr><td rowspan="2"><b>六 · 技术供应链</b></td><td>总体团队（本课程项目组）</td><td>中</td><td>中</td><td>概念可行性、备选方案对比、风险清单</td></tr>
+            <tr><td>盾构/磁浮/真空/深海/航天供应商</td><td>中</td><td>中</td><td>技术成熟度、模块化制造、测试条件</td></tr>
+            <tr><td><b>七 · 远期太空</b></td><td>轨道居民、太空工业、深空港</td><td>低</td><td>中</td><td>入轨通量、辐射防护、接驳可靠性</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="note warn">
+        <b>一个容易被忽略的卡点</b>：这类工程的常规保险模型不适用——巨灾风险概率无法估计、
+        赔付边界无法界定。保险与风险评估机构应在概念阶段就被纳入，否则后期会出现"建得起、保不起"。
+      </p>
+
+      <h3>权力—利益四象限</h3>
+      <p>
+        把七类相关方按<strong>权力</strong>（能不能否决或改变项目）与<strong>利益</strong>（受项目影响的深浅）
+        摆进四象限，可以看出这一阶段的发力点在哪。
+      </p>
+
+      <figure class="fig reveal">
+        <svg viewBox="0 0 900 540" role="img" aria-label="相关方权力—利益四象限图">
+          <!-- 绘图区 -->
+          <rect x="80" y="60" width="760" height="400" fill="rgba(255,255,255,0.015)" stroke="rgba(238,243,250,0.18)"/>
+          <!-- 象限分割 -->
+          <line x1="460" y1="60" x2="460" y2="460" stroke="rgba(238,243,250,0.22)" stroke-dasharray="5 6"/>
+          <line x1="80" y1="260" x2="840" y2="260" stroke="rgba(238,243,250,0.22)" stroke-dasharray="5 6"/>
+
+          <!-- 象限名 -->
+          <g font-family="ui-monospace, Consolas, monospace" font-size="10.5" letter-spacing="2">
+            <text x="98" y="86" fill="#74829a">权力高 · 利益低</text>
+            <text x="98" y="104" fill="#5b9dff">保持满意</text>
+            <text x="620" y="86" fill="#74829a">权力高 · 利益高</text>
+            <text x="620" y="104" fill="#5fd0a8">重点管理</text>
+            <text x="98" y="436" fill="#74829a">权力低 · 利益低</text>
+            <text x="98" y="454" fill="#74829a">最小监督</text>
+            <text x="620" y="436" fill="#74829a">权力低 · 利益高</text>
+            <text x="620" y="454" fill="#6fd3e6">保持告知</text>
+          </g>
+
+          <!-- 轴 -->
+          <g stroke="rgba(238,243,250,0.35)" stroke-width="1">
+            <line x1="80" y1="460" x2="840" y2="460"/>
+            <line x1="80" y1="60" x2="80" y2="460"/>
+          </g>
+          <text x="800" y="486" font-family="ui-monospace, Consolas, monospace" font-size="11" fill="#a9b7ca">利益 →</text>
+          <text x="60" y="70" font-family="ui-monospace, Consolas, monospace" font-size="11" fill="#a9b7ca">↑ 权力</text>
+
+          <!-- 相关方点 -->
+          <g fill="#5fd0a8" stroke="#0b1220" stroke-width="1.5">
+            <circle cx="712" cy="140" r="7"/>
+            <circle cx="640" cy="206" r="7"/>
+          </g>
+          <g fill="#5b9dff" stroke="#0b1220" stroke-width="1.5">
+            <circle cx="352" cy="150" r="7"/>
+            <circle cx="250" cy="205" r="7"/>
+          </g>
+          <g fill="#6fd3e6" stroke="#0b1220" stroke-width="1.5">
+            <circle cx="700" cy="392" r="7"/>
+            <circle cx="592" cy="330" r="7"/>
+          </g>
+          <g fill="#74829a" stroke="#0b1220" stroke-width="1.5">
+            <circle cx="330" cy="368" r="7"/>
+            <circle cx="196" cy="416" r="7"/>
+          </g>
+
+          <!-- 标签 -->
+          <g font-size="12" fill="#dbe4f0">
+            <text x="698" y="120" text-anchor="end">各国政府 · 出资方</text>
+            <text x="626" y="186" text-anchor="end">直接用户（客运/货运/科研）</text>
+            <text x="368" y="154">标准 · 监管机构</text>
+            <text x="266" y="209">项目总体团队</text>
+            <text x="686" y="372" text-anchor="end">沿线社区 · 环保组织</text>
+            <text x="578" y="310" text-anchor="end">运营维护方</text>
+            <text x="346" y="372">技术供应链</text>
+            <text x="212" y="420">远期太空相关方</text>
+          </g>
+        </svg>
+        <figcaption>概念阶段的发力点：右上（各国政府与出资方、直接用户）决定项目能不能立；右下（社区与环保）决定会不会被否；左上（监管与标准）给底线；左下暂不主导。</figcaption>
+      </figure>
+
+      <p class="cite">
+        <b>读图说明</b>：权力与利益都是相对判断，依据来自第 04 节的关切分析，不是量化评分；
+        同一类相关方内部也可能分裂（例如中央政府与地方政府立场不同），概念阶段先按类别归档。
+      </p>
+    </section>
+
+    <!-- 05 StRS -->
+    <section class="sec" id="strs">
+      <p class="label"><i>05</i> StRS 相关方需求规格说明</p>
+      <h2>相关方需求规格说明</h2>
+      <p class="sub">按表4-5 的八章轮廓展开；第 5 章为用户需求条目，是本页的重点。</p>
+
+      <h3><span class="no">1</span>简介</h3>
+      <h4>1.1 相关方目的</h4>
+      <p>定义组织在什么条件下、以什么方式使用这套系统为业务带来价值；明确"谁的需求优先"。</p>
+      <h4>1.2 相关方范围</h4>
+      <p>覆盖地表干线、分支、车站、轨道接驳段；不覆盖具体车辆设计与站点建筑。</p>
+      <h4>1.3 概况</h4>
+      <p>系统以环线为骨干，串联大洲站；分支降速接入；竖直段作为远期入轨通道。</p>
+      <h4>1.4 定义</h4>
+      <p>术语同 BRS 1.4；另增"降级运营""隔离段""验证门限"三个本地定义。</p>
+      <h4>1.5 相关方</h4>
+      <p>见第 04 节七类清单。</p>
+
+      <h3><span class="no">2</span>参考</h3>
+      <p>ISO/IEC/IEEE 29148:2018；ISO/IEC/IEEE 15288:2023；《第4章 概念定义》表4-5。</p>
+
+      <h3><span class="no">3</span>业务管理需求</h3>
+      <h4>3.1 业务环境</h4>
+      <p>跨境、跨法域、跨气候带；技术基础存在但未经验证于超长尺度。</p>
+      <h4>3.2 使命、目的与目标</h4>
+      <p>使命：重建地表运输骨干并作为空间开发起跳结构。目的：洲际小时级、结构可承载。目标：分期验证门限。</p>
+      <h4>3.3 业务模型</h4>
+      <p>大洲牵头 + 跨洲管委会；收入来自票务、货运、管廊、科研四类。</p>
+      <h4>3.4 信息环境</h4>
+      <p>统一标准库、跨洲调度信息、分段资产台账。</p>
+
+      <h3><span class="no">4</span>系统运行需求</h3>
+      <h4>4.1 系统过程</h4>
+      <p>发车、巡航、进站、检修、应急隔离、复压六个主过程。</p>
+      <h4>4.2 系统运行策略与规则</h4>
+      <p>日间客运优先、夜间货运优先、科研预约；单段失压即封段。</p>
+      <h4>4.3 系统运行约束</h4>
+      <p>加速度上限（乘客舒适）、真空度维持能力、闸门启闭时间、救援可达时间。</p>
+      <h4>4.4 系统运行模式与状态</h4>
+      <p>正常 / 降级 / 隔离检修 / 应急 / 停运，见第 03 节表。</p>
+
+      <h3><span class="no">5</span>用户需求</h3>
+      <div class="tbl">
+        <table>
+          <caption>用户需求条目（来源相关方 / 优先级 / 验收判据）</caption>
+          <thead><tr><th>编号</th><th>需求</th><th>来源</th><th>优先级</th><th>验收判据</th></tr></thead>
+          <tbody>
+            <tr><td class="id">UR-01</td><td>洲际直达行程控制在小时级</td><td>客运乘客</td><td>高</td><td>端到端时间达标（按设计速度折算）</td></tr>
+            <tr><td class="id">UR-02</td><td>全程加速度不超过乘客可承受阈值</td><td>客运乘客</td><td>高</td><td>加速段实测值不超限</td></tr>
+            <tr><td class="id">UR-03</td><td>单段失压时同段乘客可安全撤离</td><td>乘客 / 救援团队</td><td>高</td><td>撤离演练在窗口内完成</td></tr>
+            <tr><td class="id">UR-04</td><td>夜间货运准点率满足物流要求</td><td>货运客户</td><td>高</td><td>准点率统计达标</td></tr>
+            <tr><td class="id">UR-05</td><td>可预约封闭真空实验段</td><td>科研用户</td><td>中</td><td>预约窗口可用、真空度达标</td></tr>
+            <tr><td class="id">UR-06</td><td>票价分层且可预期</td><td>乘客</td><td>中</td><td>票务规则公示、无隐性收费</td></tr>
+            <tr><td class="id">UR-07</td><td>沿线噪声与振动低于地方限值</td><td>沿线居民</td><td>高</td><td>监测点数据达标</td></tr>
+            <tr><td class="id">UR-08</td><td>海底段施工与运营不突破生态阈值</td><td>环保机构</td><td>高</td><td>环评指标不超限</td></tr>
+            <tr><td class="id">UR-09</td><td>检修天窗内可完成闸门与泵组更换</td><td>运营商</td><td>中</td><td>单次天窗作业闭环</td></tr>
+            <tr><td class="id">UR-10</td><td>跨境换乘不重复安检与重复报关</td><td>乘客 / 海关</td><td>中</td><td>中转站一次通关</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3><span class="no">6</span>详细生存周期概念</h3>
+      <h4>6.1 运行概念</h4>
+      <p>见第 03 节 OpsCon：系统做什么、为什么，以及五种运行模式。</p>
+      <h4>6.2 运行场景</h4>
+      <p>SC-01 至 SC-06，见第 03 节场景表。</p>
+      <h4>6.3 采办概念</h4>
+      <p>按模块分包招标；核心接口标准由管委会统一发布。</p>
+      <h4>6.4 部署概念</h4>
+      <p>四期推进：示范段 → 区域线 → 洲际线 → 环线。</p>
+      <h4>6.5 支持概念</h4>
+      <p>沿线维护基地 + 模块化备件库 + 远程状态监测。</p>
+      <h4>6.6 弃置概念</h4>
+      <p>管段封存或拆除，拆后恢复地表与海床；闸门与泵组回收。</p>
+
+      <h3><span class="no">7</span>项目约束</h3>
+      <ul class="pts">
+        <li>概念阶段不做详细设计，需求只到"可验证"的程度。</li>
+        <li>数据受限，涉及规模的指标均为量级。</li>
+        <li>跨境事项只能提出原则，无法在本阶段定案。</li>
+      </ul>
+
+      <h3><span class="no">8</span>附录</h3>
+      <div class="tbl">
+        <table>
+          <caption>8.1 缩写与缩略语</caption>
+          <thead><tr><th>缩写</th><th>全称</th><th>中文</th></tr></thead>
+          <tbody>
+            <tr><td class="id">BRS</td><td>Business Requirements Specification</td><td>业务需求规格说明</td></tr>
+            <tr><td class="id">StRS</td><td>Stakeholder Requirements Specification</td><td>相关方需求规格说明</td></tr>
+            <tr><td class="id">ConOps</td><td>Concept of Operations</td><td>运营概念（组织层）</td></tr>
+            <tr><td class="id">OpsCon</td><td>Operational Concept</td><td>运行概念（系统层）</td></tr>
+            <tr><td class="id">SoS</td><td>System of Systems</td><td>体系</td></tr>
+            <tr><td class="id">OCD</td><td>Operational Concept Document</td><td>运行概念文档</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 06 冲突与权衡 -->
+    <section class="sec" id="tradeoff">
+      <p class="label"><i>06</i> 冲突与权衡 / TRADE-OFFS</p>
+      <h2>这一阶段真正的产出：冲突清单</h2>
+      <p>
+        相关方分析的价值不在"列全了谁"，而在<strong>把互相打架的诉求摊开</strong>。
+        下面四组冲突，是后续顶层目标与权衡研究的直接输入。
+      </p>
+
+      <div class="tbl">
+        <table>
+          <caption>概念阶段识别的四组主要冲突</caption>
+          <thead><tr><th>冲突</th><th>一方</th><th>另一方</th><th>权衡方向</th></tr></thead>
+          <tbody>
+            <tr><td><b>闸门密度</b></td><td>出资方：闸门越多越贵，希望减少</td><td>救援方：隔离越细越安全，希望加密</td><td>按"单段最大可接受损失"反推间距</td></tr>
+            <tr><td><b>站距与速度</b></td><td>沿线城市：希望设站带动经济</td><td>干线乘客：希望少停站保速度</td><td>大站少设，支线接入，分层服务</td></tr>
+            <tr><td><b>主权与统一</b></td><td>各国政府：要线路与调度主权</td><td>管委会：要统一接口与联调</td><td>核心标准统一，洲内事务自治</td></tr>
+            <tr><td><b>造价与生态</b></td><td>投资方：控制造价</td><td>环保方：要求可逆与低扰动</td><td>选线避让优先于事后补偿</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="note">
+        <b>一句话总结</b>：概念阶段的相关方分析，目的不是敲定方案，而是把"出资方想省闸门、
+        救援方想加密闸门""货运想优先、客运想准点""地表国家关心主权、太空段涉及外层空间法规"
+        这些矛盾记录下来，作为后续权衡研究的输入。
+      </p>
+
+      <p class="note warn">
+        <b>资料来源说明</b>：本页的相关方分类与冲突清单，部分参考了小组讨论与 AI 辅助整理的材料，
+        我已按表4-1/表4-5 的框架重新组织，并逐条核对了与系统构想的一致性；
+        涉及具体数字（造价、长度）的口径，以作业一中的说明为准。
+      </p>
+    </section>
+
+    <!-- 07 参考资料 -->
+    <section class="sec" id="bib">
+      <p class="label"><i>07</i> 参考资料 / REFERENCES</p>
+      <h2>引用来源</h2>
+      <p>
+        本文用到的框架、定义与事实性表述，来源如下。访问日期：2026 年 11 月。
+        正文中标注 [1][2][3][5][6] 的位置即对应此表；[4] 为构想灵感来源，未在正文引用。
+      </p>
+
+      <ol class="bib">
+        <li>ISO/IEC/IEEE 29148:2018, <i>Systems and software engineering — Life cycle processes — Requirements engineering</i>.
+          表4-1（BRS 范例）与表4-5（StRS 范例）即出自该标准。
+          IEEE 标准页面：<a href="https://standards.ieee.org/ieee/29148/6937/">standards.ieee.org/ieee/29148/6937</a>
+        </li>
+        <li>ISO/IEC/IEEE 15288:2023, <i>Systems and software engineering — System life cycle processes</i>.
+          业务或使命分析过程的五项活动（准备、定义问题空间、描述解空间、评估方案类、管理分析）出自该标准。
+          仅按标准编号引用，可在 iso.org 检索。
+        </li>
+        <li>郭宝柱 等.《系统工程——基于国际标准过程的研究与实践》. 第 4 章 概念定义.
+          课程提供 PDF 资料；本页的表4-1、表4-5 全文与 4.1.2 节 ConOps/OpsCon 辨析均据此。
+        </li>
+        <li>刘慈欣.《地球大炮》. 短篇小说. 本构想的灵感来源，非技术依据。</li>
+        <li>本站《作业一 · 系统构想与层级分解》. <a href="./hw1.html">hw1.html</a> ——
+          涉及长度、造价、技术路线等量化口径，以该页及其引用为准。
+        </li>
+        <li>小组讨论与 AI 辅助整理材料《真空管道 + 轨道悬浮城市项目相关方识别》(2026-11-13).
+          用于第 04 节相关方分类的初稿，已按表4-1/表4-5 重新组织，并与作业一的系统设定逐条核对。
+        </li>
+      </ol>
+
+      <p class="note">
+        <b>口径说明</b>：一、标准为付费文档，此处只引用编号与定义表述，未复制原文；
+        二、ISO 官网在本次核对时对本机网络返回 403，故 ISO 条目仅以标准编号标注，未附直链；
+        三、规模与造价的具体数字（如环线长度、每公里造价量级）不在本页重述，
+        统一以作业一及其引用为准，避免两页口径不一致。
+      </p>
+    </section>
+
+    <footer class="end">
+      <p>作业二 · 2026 · 依据 ISO/IEC/IEEE 29148:2018 表4-1 / 表4-5</p>
+      <p><a href="./project.html">← 返回项目主页</a> ｜ <a href="./hw1.html">作业一</a> ｜ <a href="./index.html">个人主页</a></p>
+    </footer>
+  </div>
+
+  <script>
+    (function () {
+      var links = Array.prototype.slice.call(document.querySelectorAll('.nav a.item'));
+      var secs = links.map(function (a) { return document.querySelector(a.getAttribute('href')); });
+      function setActive(id) {
+        links.forEach(function (a) { a.classList.toggle('active', a.getAttribute('href') === '#' + id); });
+      }
+      if ('IntersectionObserver' in window) {
+        var io = new IntersectionObserver(function (entries) {
+          entries.forEach(function (e) { if (e.isIntersecting) setActive(e.target.id); });
+        }, { rootMargin: '-40% 0px -52% 0px', threshold: 0 });
+        secs.forEach(function (s) { if (s) io.observe(s); });
+      }
+      links.forEach(function (a) {
+        a.addEventListener('click', function (e) {
+          var id = a.getAttribute('href').slice(1);
+          var t = document.getElementById(id);
+          if (!t) return;
+          e.preventDefault();
+          var top = t.getBoundingClientRect().top + window.pageYOffset - 58;
+          window.scrollTo({ top: top, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+          if (history.replaceState) history.replaceState(null, '', '#' + id);
+          setActive(id);
+        });
+      });
+      var reveals = document.querySelectorAll('.reveal');
+      if ('IntersectionObserver' in window) {
+        var ro = new IntersectionObserver(function (entries) {
+          entries.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('in'); ro.unobserve(e.target); } });
+        }, { rootMargin: '0px 0px -8% 0px', threshold: 0.05 });
+        reveals.forEach(function (el) { ro.observe(el); });
+      } else {
+        reveals.forEach(function (el) { el.classList.add('in'); });
+      }
+    })();
+  </script>
+</body>
+</html>
