@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>作业三 · 系统需求与架构定义｜真空管道运输系统</title>
+<style>
+  /* ============================================================
+     作业三：系统需求规格（SyRS）+ 初始系统架构 + STPA 安全分析
+     ============================================================ */
+  :root {
+    --bg:    #04070d;
+    --bg-2:  #070c16;
+    --ink:   #eef3fa;
+    --dim:   #a9b7ca;
+    --muted: #74829a;
+    --blue:  #5b9dff;
+    --cyan:  #6fd3e6;
+    --green: #5fd0a8;
+    --warm:  #e0a15a;
+    --red:   #e08a8a;
+    --line:  rgba(238, 243, 250, 0.10);
+    --line-2:rgba(238, 243, 250, 0.22);
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI",
+            "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    --mono: ui-monospace, SFMono-Regular, Consolas, "Cascadia Mono", monospace;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 62px; }
+  body { margin: 0; background: var(--bg); color: var(--dim); font-family: var(--sans);
+         line-height: 1.9; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+
+  .aura {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(65% 40% at 50% -8%, rgba(91,157,255,.18) 0%, transparent 70%),
+      radial-gradient(45% 35% at 88% 8%, rgba(111,211,230,.09) 0%, transparent 70%),
+      linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 100%);
+  }
+  .aura::after {
+    content: ""; position: absolute; inset: 0;
+    background-image:
+      linear-gradient(to right, rgba(238,243,250,.032) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(238,243,250,.032) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(110% 80% at 50% 0%, #000 25%, transparent 80%);
+    -webkit-mask-image: radial-gradient(110% 80% at 50% 0%, #000 25%, transparent 80%);
+  }
+
+  .nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+    display: flex; align-items: center; gap: 14px;
+    height: 58px; padding: 0 clamp(14px, 3.4vw, 40px);
+    background: rgba(4,7,13,.84); border-bottom: 1px solid var(--line);
+    -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  }
+  .brand { display: flex; align-items: baseline; gap: 10px; color: var(--ink); text-decoration: none; white-space: nowrap; flex: none; }
+  .brand b { font-size: 13.5px; font-weight: 600; letter-spacing: .06em; }
+  .brand span { font-family: var(--mono); font-size: 10px; letter-spacing: .16em; color: var(--muted); }
+  .home { flex: none; padding: 5px 12px; font-size: 11.5px; color: var(--cyan); text-decoration: none;
+          border: 1px solid rgba(111,211,230,.4); border-radius: 2px; white-space: nowrap; transition: background .2s, border-color .2s; }
+  .home:hover { background: rgba(111,211,230,.14); border-color: rgba(111,211,230,.75); }
+  .nav ul { display: flex; align-items: center; gap: clamp(9px, 1.6vw, 20px); margin: 0 0 0 auto; padding: 0;
+            list-style: none; overflow-x: auto; scrollbar-width: none; }
+  .nav ul::-webkit-scrollbar { display: none; }
+  .nav a.item { position: relative; display: block; padding: 6px 0; font-size: 12px; color: var(--muted);
+                text-decoration: none; white-space: nowrap; transition: color .2s; }
+  .nav a.item::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1.5px;
+                background: var(--blue); transform: scaleX(0); transform-origin: left; transition: transform .25s; }
+  .nav a.item:hover { color: var(--dim); }
+  .nav a.item.active { color: var(--ink); }
+  .nav a.item.active::after { transform: scaleX(1); }
+
+  .wrap { position: relative; z-index: 1; max-width: 1000px; margin: 0 auto; padding: 0 clamp(16px, 3.6vw, 30px); }
+
+  .hero { padding: clamp(92px, 14vh, 150px) 0 clamp(38px, 6vh, 60px); }
+  .eyebrow { margin: 0 0 20px; font-family: var(--mono); font-size: 10.5px; letter-spacing: .30em; color: var(--cyan); }
+  h1 { margin: 0; font-size: clamp(25px, 4vw, 42px); line-height: 1.45; font-weight: 600; color: var(--ink); text-wrap: balance; }
+  h1 .accent { color: var(--blue); }
+  .lede { margin: 22px 0 0; max-width: 40em; font-size: 15.5px; line-height: 2; color: #c3cedc; }
+  .facts { display: flex; flex-wrap: wrap; gap: 10px 34px; margin: 32px 0 0; padding: 16px 0 0;
+           border-top: 1px solid var(--line); list-style: none; font-family: var(--mono);
+           font-size: 10.5px; letter-spacing: .10em; color: var(--muted); }
+  .facts b { color: var(--ink); font-weight: 500; margin-left: 8px; }
+
+  section.sec { padding: clamp(46px, 8vh, 82px) 0; border-top: 1px solid var(--line); scroll-margin-top: 60px; }
+  .label { display: flex; align-items: center; gap: 12px; margin: 0 0 10px; font-family: var(--mono);
+           font-size: 10.5px; letter-spacing: .26em; color: var(--muted); }
+  .label i { font-style: normal; color: var(--blue); }
+  h2 { margin: 0 0 8px; font-size: clamp(21px, 3vw, 29px); font-weight: 600; color: var(--ink); text-wrap: balance; }
+  .sub { margin: 0 0 20px; font-size: 13px; color: var(--muted); }
+  .sec > p { max-width: 44em; margin: 0 0 1em; font-size: 14.5px; line-height: 2; }
+  .sec > p strong { color: var(--ink); font-weight: 600; }
+
+  h3 { margin: 30px 0 10px; font-size: 15.5px; font-weight: 600; color: var(--ink); letter-spacing: .03em; }
+  h3 .no { font-family: var(--mono); font-size: 12px; color: var(--blue); margin-right: 10px; font-weight: 400; }
+  h4 { margin: 20px 0 6px; font-size: 14px; font-weight: 600; color: var(--cyan); }
+
+  ul.pts { margin: 10px 0 0; padding: 0; list-style: none; }
+  ul.pts li { position: relative; margin: 0 0 9px; padding-left: 20px; font-size: 14px; line-height: 1.95; }
+  ul.pts li::before { content: ""; position: absolute; left: 0; top: .78em; width: 7px; height: 1px; background: var(--cyan); }
+  ul.pts li b { color: var(--ink); font-weight: 600; }
+
+  .tbl { margin: 18px 0 0; overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 640px; }
+  caption { caption-side: top; text-align: left; padding-bottom: 8px; font-family: var(--mono);
+            font-size: 10px; letter-spacing: .12em; color: var(--muted); }
+  th, td { padding: 10px 12px 10px 0; text-align: left; vertical-align: top;
+           border-bottom: 1px solid var(--line); line-height: 1.75; }
+  th { font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; color: var(--muted);
+       font-weight: 400; white-space: nowrap; }
+  td b { color: var(--ink); font-weight: 600; }
+  td.id { font-family: var(--mono); font-size: 11px; color: var(--blue); white-space: nowrap; }
+
+  .note { margin: 22px 0 0; padding: 14px 18px; border-left: 2px solid var(--blue);
+          background: rgba(91,157,255,.06); font-size: 13px; line-height: 1.9; color: #bcc9da; }
+  .note b { color: var(--ink); }
+  .note.warn { border-left-color: var(--warm); background: rgba(224,161,90,.07); }
+  .note.danger { border-left-color: var(--red); background: rgba(224,138,138,.07); }
+  .cite { margin: 8px 0 0; font-size: 11.5px; color: #7d8ba0; line-height: 1.7; }
+
+  figure.fig { margin: 22px 0 0; padding: 18px; border: 1px solid var(--line-2); background: rgba(255,255,255,.02); }
+  figure.fig svg { display: block; width: 100%; height: auto; }
+  figcaption { margin-top: 12px; font-size: 11.5px; line-height: 1.75; color: var(--muted); }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin: 18px 0 0; }
+  .card { padding: 16px 18px; border: 1px solid var(--line); background: rgba(255,255,255,.022); }
+  .card h4 { margin: 0 0 5px; font-size: 12.5px; color: var(--cyan); }
+  .card p { margin: 0; font-size: 12.5px; line-height: 1.8; }
+
+  .bib { margin: 18px 0 0; padding-left: 24px; font-size: 12.5px; line-height: 1.95; }
+  .bib li { margin-bottom: 9px; }
+  .bib li::marker { color: var(--blue); font-family: var(--mono); font-size: 11px; }
+  .bib a { color: #8fb0d8; text-decoration: none; border-bottom: 1px dotted rgba(143,176,216,.5); word-break: break-all; }
+  .bib a:hover { color: #cfe3ff; }
+
+  .end { position: relative; z-index: 1; padding: 42px 0 52px; border-top: 1px solid var(--line);
+         font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em; color: var(--muted); }
+  .end p { margin: 0 0 8px; }
+  .end a { color: var(--blue); text-decoration: none; }
+  .end a:hover { color: var(--ink); }
+
+  a:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .reveal { opacity: 0; transform: translateY(12px); transition: opacity .6s ease, transform .6s cubic-bezier(.22,.68,.2,1); }
+    .reveal.in { opacity: 1; transform: none; }
+  }
+  @media (max-width: 760px) {
+    .nav { height: auto; padding: 9px 12px; flex-wrap: wrap; gap: 8px; }
+    .brand b { font-size: 12.5px; }
+    .nav ul { width: 100%; }
+    .nav a.item { font-size: 11.5px; }
+    section.sec { scroll-margin-top: 96px; }
+  }
+</style>
+</head>
+<body>
+  <div class="aura" aria-hidden="true"></div>
+
+  <nav class="nav" aria-label="章节导航">
+    <a class="brand" href="#top"><b>作业三</b><span>SyRS / ARCH / STPA</span></a>
+    <a class="home" href="./project.html">← 项目主页</a>
+    <ul>
+      <li><a class="item" href="#brief">作业说明</a></li>
+      <li><a class="item" href="#syrs">系统需求</a></li>
+      <li><a class="item" href="#arch">初始架构</a></li>
+      <li><a class="item" href="#ctrl">控制结构</a></li>
+      <li><a class="item" href="#stpa">安全分析</a></li>
+      <li><a class="item" href="#safety">安全需求</a></li>
+      <li><a class="item" href="#bib">参考资料</a></li>
+    </ul>
+  </nav>
+
+  <header class="hero" id="top">
+    <div class="wrap">
+      <p class="eyebrow">作业三 · 系统定义阶段</p>
+      <h1>系统需求规格、初始架构<br />与 <span class="accent">STPA 安全分析</span></h1>
+      <p class="lede">
+        对象系统：真空管道运输系统。本页从作业二的 StRS 往下走一层，输出系统需求规格（SyRS）、
+        初始系统架构与控制结构框图，并用 STPA 推导安全需求与安全架构。
+      </p>
+      <ul class="facts">
+        <li>阶段<b>系统定义</b></li>
+        <li>依据<b>29148:2018 SyRS</b></li>
+        <li>方法<b>STPA / SAE J3187</b></li>
+      </ul>
+    </div>
+  </header>
+
+  <div class="wrap">
+
+    <!-- 00 作业说明 -->
+    <section class="sec" id="brief">
+      <p class="label"><i>00</i> 作业说明 / BRIEF</p>
+      <h2>这一步在做什么</h2>
+      <p>
+        作业二还停留在<strong>问题域</strong>：组织要什么、相关方要什么。作业三进入<strong>方案域</strong>：
+        把相关方需求翻译成系统级需求，定义系统的结构（架构），再用 STPA 找出"控制错了会怎样"，
+        反推出安全需求与安全架构。
+      </p>
+
+      <div class="cards">
+        <div class="card">
+          <h4>输入</h4>
+          <p>作业二的 StRS 用户需求 UR-01～UR-10，以及运行场景 SC-01～SC-06。</p>
+        </div>
+        <div class="card">
+          <h4>输出</h4>
+          <p>系统需求规格（SyRS）、初始系统架构、系统控制框图、安全需求与安全架构。</p>
+        </div>
+        <div class="card">
+          <h4>方法</h4>
+          <p>需求下推（分解与追溯）；架构分逻辑/功能/物理三视图；安全用 STPA 四步法。</p>
+        </div>
+      </div>
+
+      <p class="cite">
+        依据：[1] ISO/IEC/IEEE 29148:2018（SyRS 框架）；[2] SAE J3187 与 STPA（Leveson &amp; Thomas）；
+        [3] 课程《5-系统工程开发过程2》第 5 章系统定义、《系统建模与系统分析专题》STPA 部分。
+        <b>说明</b>：课件第 18 页仅引用了表5-1 的图号，表的本体未在课件中给出，本页按 29148:2018 的
+        SyRS 通用八章结构组织，条目内容为小组自行撰写。
+      </p>
+    </section>
+
+    <!-- 01 SyRS -->
+    <section class="sec" id="syrs">
+      <p class="label"><i>01</i> 系统需求规格说明书 SyRS</p>
+      <h2>系统需求规格说明书</h2>
+      <p class="sub">严格按 ISO/IEC/IEEE 29148:2018 第 9.5 节（SyRS 内容）组织，条款号与标准一一对应。</p>
+
+      <p>
+        系统需求规格（SyRS）不从"章节体例"出发，而是按<strong>需求属性</strong>分节：
+        功能、可用性、性能、接口、运行、模式、物理、环境、安全、信息、法规、保障、运输、验证、假设。
+        这样每一类需求都有明确的验证方式。每条需求标注它来自作业二的哪条相关方需求（UR）。
+      </p>
+
+      <div class="tbl">
+        <table>
+          <caption>9.5 节条款与本节对应位置</caption>
+          <thead><tr><th>标准条款</th><th>标题</th><th>本节</th></tr></thead>
+          <tbody>
+            <tr><td class="id">9.5.2</td><td>System purpose 系统目的</td><td>1</td></tr>
+            <tr><td class="id">9.5.3</td><td>System scope 系统范围</td><td>2</td></tr>
+            <tr><td class="id">9.5.4</td><td>System overview 系统概述</td><td>3</td></tr>
+            <tr><td class="id">9.5.5</td><td>Functional requirements 功能需求</td><td>4</td></tr>
+            <tr><td class="id">9.5.6</td><td>Usability requirements 可用性需求</td><td>5</td></tr>
+            <tr><td class="id">9.5.7</td><td>Performance requirements 性能需求</td><td>6</td></tr>
+            <tr><td class="id">9.5.8</td><td>System interface requirements 接口需求</td><td>7</td></tr>
+            <tr><td class="id">9.5.9</td><td>System operations 系统运行</td><td>8</td></tr>
+            <tr><td class="id">9.5.10</td><td>System modes and states 模式与状态</td><td>9</td></tr>
+            <tr><td class="id">9.5.11</td><td>Physical characteristics 物理特性</td><td>10</td></tr>
+            <tr><td class="id">9.5.12</td><td>Environmental conditions 环境条件</td><td>11</td></tr>
+            <tr><td class="id">9.5.13</td><td>System security requirements 安全保密</td><td>12</td></tr>
+            <tr><td class="id">9.5.14</td><td>Information management 信息管理</td><td>13</td></tr>
+            <tr><td class="id">9.5.15</td><td>Policy and regulation 政策法规</td><td>14</td></tr>
+            <tr><td class="id">9.5.16</td><td>Life cycle sustainment 全寿命保障</td><td>15</td></tr>
+            <tr><td class="id">9.5.17</td><td>Packaging / handling / transportation 包装运输</td><td>16</td></tr>
+            <tr><td class="id">9.5.18</td><td>Verification 验证</td><td>17</td></tr>
+            <tr><td class="id">9.5.19</td><td>Assumptions and dependencies 假设与依赖</td><td>18</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3><span class="no">1</span>系统目的</h3>
+      <p class="sub" style="margin-bottom:8px">对应 9.5.2 System purpose</p>
+      <p>
+        系统被开发的原因是：在机场、港口、铁路三种洲际通道渐近饱和的背景下，提供第四条骨干通道，
+        以真空管道消除空气阻力、以磁浮消除轮轨摩擦，把跨洲运输的时间成本压到小时级；
+        同时这条管廊作为结构骨架，为后续的能源输配、科研实验与轨道延伸提供共用基础。
+      </p>
+
+      <h3><span class="no">2</span>系统范围</h3>
+      <p class="sub" style="margin-bottom:8px">对应 9.5.3 System scope</p>
+      <ul class="pts">
+        <li><b>命名</b>：系统名称为"真空管道运输系统"（Vacuum Tube Transit System）。</li>
+        <li><b>解决的问题</b>：洲际运输在速度、容量、能耗三者间无法兼顾；既有通道受地理与航空管制刚性约束。</li>
+        <li><b>做什么</b>：在选定站点之间提供高速客运与夜间货运，并可在预约时段开放为真空实验环境。</li>
+        <li><b>不做什么</b>：不承担站内商业运营、不承担城市接驳、不承诺轨道延伸段（作为衍生方案另行立项）。</li>
+        <li><b>应用与收益</b>：跨洲通勤时间下降；沿线形成节点城市；能源与科研共用管廊降低单位投资。</li>
+      </ul>
+
+      <h3><span class="no">3</span>系统概述</h3>
+      <p class="sub" style="margin-bottom:8px">对应 9.5.4 System overview（上下文 / 功能 / 用户特征）</p>
+      <h4>3.1 系统上下文</h4>
+      <p>
+        系统处于"大洲运营商 — 跨洲管委会 — 站点运营单元"三层组织之中，
+        与外部电网、海关边检、既有交通方式、科研机构存在接口。系统内部由管段、泵组、闸门、
+        舱体、调度中心五类要素构成，边界定义见第 03 节控制结构框图。
+      </p>
+      <h4>3.2 系统功能</h4>
+      <ul class="pts">
+        <li>在站间完成舱体的加速、巡航、减速与停靠。</li>
+        <li>维持管内真空并监测漏率，异常时自动隔离。</li>
+        <li>按日间客运 / 夜间货运 / 科研窗口三种占用方式调度管段。</li>
+        <li>提供对外状态广播与事故通报。</li>
+      </ul>
+      <h4>3.3 用户特征</h4>
+      <ul class="pts">
+        <li><b>乘客</b>：一次性使用者，无培训基础，界面需极端易用。</li>
+        <li><b>运维人员</b>：专业岗位，需值守与检修权限。</li>
+        <li><b>调度员</b>：决策岗位，需全局态势与降级判断能力。</li>
+        <li><b>科研用户</b>：按预约使用，对真空度与振动更敏感。</li>
+      </ul>
+
+      <h3><span class="no">4</span>功能需求</h3>
+      <p class="sub" style="margin-bottom:8px">对应 9.5.5 Functional requirements</p>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>编号</th><th>需求</th><th>来源</th></tr></thead>
+          <tbody>
+            <tr><td class="id">SyRS-4-01</td><td>系统应能在相邻大洲站之间连续运行，全程不换乘</td><td>UR-01</td></tr>
+            <tr><td class="id">SyRS-4-02</td><td>系统应支持客运与货运共用干线，按时段切换占用</td><td>UR-04</td></tr>
+            <tr><td class="id">SyRS-4-03</td><td>系统应支持将指定隔离段开放为科研真空环境</td><td>UR-05</td></tr>
+            <tr><td class="id">SyRS-4-04</td><td>系统应在某段失压时自动封闭该段，其余段维持运行</td><td>UR-03</td></tr>
+            <tr><td class="id">SyRS-4-05</td><td>系统应支持站点气闸在不破坏全线真空的前提下完成上下客</td><td>UR-10</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3><span class="no">5</span>可用性需求</h3>
+      <p class="sub" style="margin-bottom:8px">对应 9.5.6 Usability requirements</p>
+      <ul class="pts">
+        <li><b>SyRS-5-01</b>：站内从进站到登舱的引导应无需人工询问即可完成（来源 UR-10）。</li>
+        <li><b>SyRS-5-02</b>：舱内状态显示应让乘客理解延误、降级等异常的含义（来源 UR-06）。</li>
+        <li><b>SyRS-5-03</b>：应急广播应覆盖多语言，信息格式统一（来源 UR-03）。</li>
+      </ul>
+
+      <h3><span class="no">6</span>性能需求</h3>
+      <p class="sub" style="margin-bottom:8px">对应 9.5.7 Performance requirements（动态量 / 耐久 / 各工况）</p>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>编号</th><th>需求</th><th>来源</th></tr></thead>
+          <tbody>
+            <tr><td class="id">SyRS-6-01</td><td>乘客承受的纵向加速度不应超过舒适阈值（概念阶段取 1g 量级）</td><td>UR-02</td></tr>
+            <tr><td class="id">SyRS-6-02</td><td>管内真空度应维持在允许区间，单段漏率超限即报警并隔离</td><td>UR-01</td></tr>
+            <tr><td class="id">SyRS-6-03</td><td>隔离闸门检出异常后应在规定时间内闭合</td><td>UR-03</td></tr>
+            <tr><td class="id">SyRS-6-04</td><td>关键设备应满足规定使用寿命与运营时长（耐久要求）</td><td>UR-09</td></tr>
+            <tr><td class="id">SyRS-6-05</td><td>各运行阶段（加速 / 巡航 / 减速 / 停靠）的性能要求分别定义并验证</td><td>UR-02</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3><span class="no">7</span>系统接口需求</h3>
+      <p class="sub" style="margin-bottom:8px">对应 9.5.8 System interface requirements（含人在回路）</p>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>编号</th><th>接口</th><th>内容</th><th>约束</th></tr></thead>
+          <tbody>
+            <tr><td class="id">SyRS-7-01</td><td>能源接口</td><td>牵引与真空泵用电</td><td>负荷可预测、可申请，波动有上限</td></tr>
+            <tr><td class="id">SyRS-7-02</td><td>海关 / 边检</td><td>旅客与货物信息</td><td>一次申报，中转站一次通关</td></tr>
+            <tr><td class="id">SyRS-7-03</td><td>既有交通</td><td>换乘与接驳</td><td>站内换乘时间可控</td></tr>
+            <tr><td class="id">SyRS-7-04</td><td>人机接口</td><td>调度员态势显示</td><td>关键告警不得被次要信息淹没</td></tr>
+            <tr><td class="id">SyRS-7-05</td><td>轨道站（远期）</td><td>载荷与接驳舱</td><td>接口暂定，不纳入本期验证</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3><span class="no">8</span>系统运行需求</h3>
+      <p class="sub" style="margin-bottom:8px">对应 9.5.9 System operations（人的系统集成 / 可维护性 / 可靠性 / 其他质量）</p>
+      <h4>8.1 人的系统集成（9.5.9.1）</h4>
+      <ul class="pts">
+        <li><b>SyRS-8-01</b>：调度、检修、救援三类岗位的职责边界应在操作界面中可视化。</li>
+        <li><b>SyRS-8-02</b>：安全关键操作（隔离、封段）应保留人工"更保守"方向的介入权。</li>
+      </ul>
+      <h4>8.2 可维护性（9.5.9.2）</h4>
+      <ul class="pts">
+        <li><b>SyRS-8-03</b>：天窗时间内应能完成闸门或泵组的整模块更换（来源 UR-09）。</li>
+        <li><b>SyRS-8-04</b>：模块更换应不要求邻段停运。</li>
+      </ul>
+      <h4>8.3 可靠性（9.5.9.3）</h4>
+      <ul class="pts">
+        <li><b>SyRS-8-05</b>：单点失效不得导致全线瘫痪，只允许降级。</li>
+        <li><b>SyRS-8-06</b>：真空抽气与传感应具备冗余配置。</li>
+      </ul>
+      <h4>8.4 其他质量（9.5.9.4）</h4>
+      <ul class="pts">
+        <li><b>SyRS-8-07</b>：系统应支持新增分支线与竖直延伸段而不重构主干。</li>
+      </ul>
+
+      <h3><span class="no">9</span>系统模式与状态</h3>
+      <p class="sub" style="margin-bottom:8px">对应 9.5.10 System modes and states</p>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>模式</th><th>触发条件</th><th>系统行为</th></tr></thead>
+          <tbody>
+            <tr><td><b>正常运营</b></td><td>真空度、闸门、供电正常</td><td>按时刻表发车</td></tr>
+            <tr><td><b>降级运营</b></td><td>单段真空度下降或设备故障</td><td>封段、绕行或限速</td></tr>
+            <tr><td><b>隔离检修</b></td><td>计划性天窗</td><td>闸门闭合、复压、人员进入</td></tr>
+            <tr><td><b>应急处置</b></td><td>破管、失压、火灾、地震</td><td>封段、疏散、开启救援通道</td></tr>
+            <tr><td><b>停运</b></td><td>重大灾害或全线检修</td><td>全段复压，转维护状态</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3><span class="no">10</span>物理特性</h3>
+      <p class="sub" style="margin-bottom:8px">对应 9.5.11 Physical characteristics（物理要求 / 可适应性）</p>
+      <ul class="pts">
+        <li><b>SyRS-10-01</b>：管节尺寸、重量与接口应标准化，满足模块化制造与替换。</li>
+        <li><b>SyRS-10-02</b>：设备标识、铭牌与互换性要求应统一。</li>
+        <li><b>SyRS-10-03</b>：系统应预留扩展能力（新增支线、增加泵组、提高运能）。</li>
+      </ul>
+
+      <h3><span class="no">11</span>环境条件</h3>
+      <p class="sub" style="margin-bottom:8px">对应 9.5.12 Environmental conditions</p>
+      <ul class="pts">
+        <li><b>自然环境</b>：温湿度、盐雾（海底段）、冻融（极区段）、地质位移。</li>
+        <li><b>诱发环境</b>：振动、噪声、电磁场、热负荷。</li>
+        <li><b>法规环境</b>：跨境运行涉及多国交通与环保法规。</li>
+        <li><b>SyRS-11-01</b>：系统在上述环境下应保持规定的功能与安全性能。</li>
+      </ul>
+
+      <h3><span class="no">12</span>系统安全保密需求</h3>
+      <p class="sub" style="margin-bottom:8px">对应 9.5.13 System security requirements</p>
+      <ul class="pts">
+        <li><b>SyRS-12-01</b>：调度与检修系统应分权访问，关键操作留痕。</li>
+        <li><b>SyRS-12-02</b>：运营数据与旅客信息应隔离存储、按最小权限访问。</li>
+        <li><b>SyRS-12-03</b>：通信链路应防止伪造指令（详见第 05 节安全需求 SR-S 系列）。</li>
+      </ul>
+
+      <h3><span class="no">13</span>信息管理需求</h3>
+      <p class="sub" style="margin-bottom:8px">对应 9.5.14 Information management requirements</p>
+      <ul class="pts">
+        <li><b>SyRS-13-01</b>：真空度、闸门状态、事故记录应按规定期限保存并可追溯。</li>
+        <li><b>SyRS-13-02</b>：分段资产台账应与物理管段编号一一对应。</li>
+      </ul>
+
+      <h3><span class="no">14</span>政策法规需求</h3>
+      <p class="sub" style="margin-bottom:8px">对应 9.5.15 Policy and regulation requirements</p>
+      <ul class="pts">
+        <li><b>SyRS-14-01</b>：系统应满足沿途各国的载人运输准入与安全规范。</li>
+        <li><b>SyRS-14-02</b>：跨国运营须符合海关、边检与数据跨境规则。</li>
+        <li><b>SyRS-14-03</b>：健康与安全准则（噪声、电磁、应急疏散）应形成条文。</li>
+      </ul>
+
+      <h3><span class="no">15</span>全寿命周期保障需求</h3>
+      <p class="sub" style="margin-bottom:8px">对应 9.5.16 Life cycle sustainment requirements</p>
+      <ul class="pts">
+        <li><b>SyRS-15-01</b>：沿线应设维护基地与备件库，保障模块化替换。</li>
+        <li><b>SyRS-15-02</b>：应提供技术资料、人员培训与初始保障包。</li>
+        <li><b>SyRS-15-03</b>：应定义弃置阶段方案（封存或拆除与环境恢复）。</li>
+      </ul>
+
+      <h3><span class="no">16</span>包装、搬运与运输需求</h3>
+      <p class="sub" style="margin-bottom:8px">对应 9.5.17 Packaging, handling, shipping and transportation</p>
+      <ul class="pts">
+        <li><b>SyRS-16-01</b>：管节、闸门、泵组等模块应可在常规运输条件下运抵现场。</li>
+        <li><b>SyRS-16-02</b>：运输与存储过程中应有防潮、防变形措施。</li>
+      </ul>
+
+      <h3><span class="no">17</span>验证</h3>
+      <p class="sub" style="margin-bottom:8px">对应 9.5.18 Verification</p>
+      <div class="tbl">
+        <table>
+          <caption>验证方式（与 9.5.5–9.5.17 各条并行给出）</caption>
+          <thead><tr><th>需求组</th><th>验证方式</th></tr></thead>
+          <tbody>
+            <tr><td>功能 SyRS-4</td><td>演示（示范段跑通完整流程）</td></tr>
+            <tr><td>可用性 SyRS-5</td><td>检查 + 试用观察</td></tr>
+            <tr><td>性能 SyRS-6</td><td>试验（加速段实测）+ 分析（真空度模型）</td></tr>
+            <tr><td>接口 SyRS-7</td><td>检查（接口文件与联调）</td></tr>
+            <tr><td>运行 SyRS-8</td><td>分析（FMEA/STPA）+ 演示（天窗更换演练）</td></tr>
+            <tr><td>模式 SyRS-9</td><td>演示（各模式切换）</td></tr>
+            <tr><td>其余 10–16</td><td>检查（文件与记录）</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3><span class="no">18</span>假设与依赖</h3>
+      <p class="sub" style="margin-bottom:8px">对应 9.5.19 Assumptions and dependencies</p>
+      <ul class="pts">
+        <li>假设供电连续且清洁；供电中断将直接影响真空维持能力。</li>
+        <li>假设跨境协定达成；否则调度主权无法统一。</li>
+        <li>依赖：磁浮、真空、盾构等既有技术体系的成熟度；依赖超级电容/储能提供峰值功率。</li>
+        <li>依赖：概念阶段不做详细设计，上述需求只到"可验证"层级。</li>
+      </ul>
+
+      <p class="cite">
+        结构依据：[1] ISO/IEC/IEEE 29148:2018 第 9.5 节「System requirements specification (SyRS) content」
+        （标准第 64–68 页），本页 9.5.2–9.5.19 各节与标准条款逐条对应；需求条目内容为小组撰写。
+      </p>
+    </section>
+
+    <!-- 02 初始架构 -->
+    <section class="sec" id="arch">
+      <p class="label"><i>02</i> 初始系统架构 / ARCHITECTURE</p>
+      <h2>三个视图</h2>
+      <p>
+        架构是"从不同视角描述系统"，同一套系统会得到不同的架构视图。
+        这里给出逻辑、功能、物理三个视图，它们层层落地。
+      </p>
+
+      <div class="cards">
+        <div class="card">
+          <h4>逻辑架构</h4>
+          <p>系统由哪些功能单元组成、彼此如何逻辑协作：运输、真空、悬浮驱动、隔离、监控、能源。</p>
+        </div>
+        <div class="card">
+          <h4>功能架构</h4>
+          <p>功能分解与信息流：从"发车"到"到站"的功能链，以及每个功能需要什么输入、产出什么输出。</p>
+        </div>
+        <div class="card">
+          <h4>物理架构</h4>
+          <p>把逻辑与功能分配到实体的管段、站点、泵站、控制中心上。</p>
+        </div>
+      </div>
+
+      <h3>逻辑架构（分层）</h3>
+      <figure class="fig reveal">
+        <svg viewBox="0 0 900 420" role="img" aria-label="真空管道运输系统逻辑分层架构">
+          <defs>
+            <marker id="arrA" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+              <path d="M0,0 L8,4 L0,8 z" fill="rgba(111,211,230,0.8)"/>
+            </marker>
+          </defs>
+          <!-- 层 -->
+          <g font-family="ui-monospace, Consolas, monospace" font-size="10.5" letter-spacing="1">
+            <text x="18" y="52" fill="#74829a">运行层</text>
+            <text x="18" y="182" fill="#74829a">功能层</text>
+            <text x="18" y="322" fill="#74829a">物理层</text>
+          </g>
+
+          <!-- 运行层 -->
+          <g fill="rgba(95,208,168,.10)" stroke="rgba(95,208,168,.65)" stroke-width="1.2">
+            <rect x="80" y="30" width="150" height="40" rx="2"/>
+            <rect x="250" y="30" width="150" height="40" rx="2"/>
+            <rect x="420" y="30" width="150" height="40" rx="2"/>
+            <rect x="590" y="30" width="150" height="40" rx="2"/>
+            <rect x="760" y="30" width="120" height="40" rx="2"/>
+          </g>
+          <g font-size="12" fill="#dbe4f0" text-anchor="middle">
+            <text x="155" y="55">调度中心</text>
+            <text x="325" y="55">车站控制</text>
+            <text x="495" y="55">舱体控制</text>
+            <text x="665" y="55">泵站控制</text>
+            <text x="820" y="55">闸门控制</text>
+          </g>
+
+          <!-- 功能层 -->
+          <g fill="rgba(91,157,255,.10)" stroke="rgba(91,157,255,.65)" stroke-width="1.2">
+            <rect x="80" y="160" width="190" height="44" rx="2"/>
+            <rect x="300" y="160" width="190" height="44" rx="2"/>
+            <rect x="520" y="160" width="190" height="44" rx="2"/>
+            <rect x="740" y="160" width="140" height="44" rx="2"/>
+          </g>
+          <g font-size="12" fill="#dbe4f0" text-anchor="middle">
+            <text x="175" y="187">运行调度 / 冲突消解</text>
+            <text x="395" y="187">真空维持与监测</text>
+            <text x="615" y="187">悬浮·导向·推进</text>
+            <text x="810" y="187">分段隔离</text>
+          </g>
+
+          <!-- 物理层 -->
+          <g fill="rgba(224,161,90,.10)" stroke="rgba(224,161,90,.6)" stroke-width="1.2">
+            <rect x="80" y="300" width="150" height="44" rx="2"/>
+            <rect x="250" y="300" width="150" height="44" rx="2"/>
+            <rect x="420" y="300" width="150" height="44" rx="2"/>
+            <rect x="590" y="300" width="150" height="44" rx="2"/>
+            <rect x="760" y="300" width="120" height="44" rx="2"/>
+          </g>
+          <g font-size="12" fill="#dbe4f0" text-anchor="middle">
+            <text x="155" y="327">控制中心</text>
+            <text x="325" y="327">站台与气闸</text>
+            <text x="495" y="327">管段与舱体</text>
+            <text x="665" y="327">真空泵组</text>
+            <text x="820" y="327">隔离闸门</text>
+          </g>
+
+          <!-- 层间链路：运行→功能 -->
+          <g stroke="rgba(111,211,230,.45)" stroke-width="1.3" marker-end="url(#arrA)">
+            <line x1="155" y1="72" x2="155" y2="156"/>
+            <line x1="325" y1="72" x2="325" y2="156"/>
+            <line x1="495" y1="72" x2="495" y2="156"/>
+            <line x1="665" y1="72" x2="665" y2="156"/>
+            <line x1="800" y1="72" x2="800" y2="156"/>
+          </g>
+          <!-- 层间链路：功能→物理 -->
+          <g stroke="rgba(111,211,230,.45)" stroke-width="1.3" marker-end="url(#arrA)">
+            <line x1="155" y1="206" x2="155" y2="296"/>
+            <line x1="325" y1="206" x2="325" y2="296"/>
+            <line x1="395" y1="206" x2="395" y2="296"/>
+            <line x1="615" y1="206" x2="615" y2="296"/>
+            <line x1="665" y1="206" x2="665" y2="296"/>
+            <line x1="810" y1="206" x2="810" y2="296"/>
+          </g>
+
+          <text x="80" y="396" font-size="11" fill="#74829a">箭头表示"上层通过下层实现"：运行层下发给功能层，功能层由物理层承载。</text>
+        </svg>
+        <figcaption>逻辑架构 · 三层：运行（谁在指挥）→ 功能（做什么）→ 物理（由谁实现）</figcaption>
+      </figure>
+
+      <h3>物理架构（管段示意）</h3>
+      <figure class="fig reveal">
+        <svg viewBox="0 0 900 260" role="img" aria-label="管段物理架构：车站、管段、闸门、泵站、控制单元">
+          <!-- 管道 -->
+          <rect x="60" y="110" width="780" height="44" rx="22" fill="rgba(91,157,255,.08)" stroke="rgba(91,157,255,.6)" stroke-width="1.4"/>
+          <!-- 闸门 -->
+          <g fill="rgba(111,211,230,.35)" stroke="#6fd3e6" stroke-width="1.4">
+            <rect x="280" y="102" width="8" height="60" rx="2"/>
+            <rect x="560" y="102" width="8" height="60" rx="2"/>
+          </g>
+          <!-- 车站 -->
+          <rect x="120" y="180" width="90" height="40" rx="3" fill="rgba(95,208,168,.12)" stroke="rgba(95,208,168,.7)" stroke-width="1.2"/>
+          <text x="165" y="205" font-size="11.5" fill="#dbe4f0" text-anchor="middle">站点 · 气闸</text>
+          <!-- 泵站 -->
+          <rect x="350" y="30" width="90" height="40" rx="3" fill="rgba(224,161,90,.12)" stroke="rgba(224,161,90,.7)" stroke-width="1.2"/>
+          <text x="395" y="55" font-size="11.5" fill="#dbe4f0" text-anchor="middle">真空泵组</text>
+          <rect x="640" y="30" width="90" height="40" rx="3" fill="rgba(224,161,90,.12)" stroke="rgba(224,161,90,.7)" stroke-width="1.2"/>
+          <text x="685" y="55" font-size="11.5" fill="#dbe4f0" text-anchor="middle">真空泵组</text>
+          <!-- 控制 -->
+          <rect x="430" y="180" width="120" height="40" rx="3" fill="rgba(91,157,255,.14)" stroke="rgba(91,157,255,.75)" stroke-width="1.2"/>
+          <text x="490" y="205" font-size="11.5" fill="#dbe4f0" text-anchor="middle">区段控制器</text>
+
+          <g stroke="rgba(238,243,250,.35)" stroke-width="1.2" stroke-dasharray="4 4">
+            <line x1="395" y1="70" x2="395" y2="108"/>
+            <line x1="685" y1="70" x2="685" y2="108"/>
+            <line x1="490" y1="178" x2="490" y2="156"/>
+            <line x1="165" y1="178" x2="165" y2="156"/>
+            <line x1="284" y1="164" x2="284" y2="178"/>
+          </g>
+          <line x1="284" y1="178" x2="430" y2="196" stroke="rgba(238,243,250,.25)" stroke-width="1.2" stroke-dasharray="4 4"/>
+          <line x1="564" y1="164" x2="550" y2="190" stroke="rgba(238,243,250,.25)" stroke-width="1.2" stroke-dasharray="4 4"/>
+
+          <g font-size="10.5" fill="#74829a" font-family="ui-monospace, Consolas, monospace">
+            <text x="300" y="122">闸门</text>
+            <text x="580" y="122">闸门</text>
+            <text x="620" y="196">隔离段</text>
+          </g>
+        </svg>
+        <figcaption>物理架构 · 站点与气闸、真空泵组、隔离闸门、区段控制器在管段上的布置</figcaption>
+      </figure>
+    </section>
+
+    <!-- 03 控制结构 -->
+    <section class="sec" id="ctrl">
+      <p class="label"><i>03</i> 系统控制结构框图 / CONTROL STRUCTURE</p>
+      <h2>谁在控制谁</h2>
+      <p>
+        STPA 的第二步是建控制结构：找出控制器、执行器、传感器与被控过程，
+        以及它们之间的<strong>控制行为</strong>与<strong>反馈</strong>。没有这张图，后面的 UCA 分析就无从下手。
+      </p>
+
+      <figure class="fig reveal">
+        <svg viewBox="0 0 900 560" role="img" aria-label="系统控制结构框图">
+          <defs>
+            <marker id="ca" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto">
+              <path d="M0,0 L9,4.5 L0,9 z" fill="#e08a8a"/>
+            </marker>
+            <marker id="fb" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto">
+              <path d="M0,0 L9,4.5 L0,9 z" fill="#5fd0a8"/>
+            </marker>
+          </defs>
+
+          <!-- 环境 -->
+          <rect x="742" y="40" width="140" height="470" rx="4" fill="rgba(95,208,168,.06)"
+                stroke="rgba(95,208,168,.45)" stroke-dasharray="6 6"/>
+          <text x="812" y="66" font-size="12" fill="#5fd0a8" text-anchor="middle">环境</text>
+          <text x="812" y="120" font-size="10.5" fill="#74829a" text-anchor="middle">地震 · 沉降</text>
+          <text x="812" y="146" font-size="10.5" fill="#74829a" text-anchor="middle">供电 · 天气</text>
+          <text x="812" y="172" font-size="10.5" fill="#74829a" text-anchor="middle">其他交通</text>
+
+          <!-- 调度中心 -->
+          <rect x="300" y="34" width="210" height="64" rx="3" fill="rgba(91,157,255,.16)" stroke="#5b9dff" stroke-width="1.5"/>
+          <text x="405" y="62" font-size="13" fill="#eef3fa" text-anchor="middle">调度中心</text>
+          <text x="405" y="82" font-size="10" fill="#74829a" text-anchor="middle">发车 / 限速 / 封段</text>
+
+          <!-- 区段控制器 -->
+          <rect x="300" y="170" width="210" height="70" rx="3" fill="rgba(91,157,255,.12)" stroke="rgba(91,157,255,.85)" stroke-width="1.4"/>
+          <text x="405" y="197" font-size="13" fill="#eef3fa" text-anchor="middle">区段控制器</text>
+          <text x="405" y="217" font-size="10" fill="#74829a" text-anchor="middle">开闭闸门 / 启停泵 / 注入功率</text>
+
+          <!-- 执行器 -->
+          <rect x="300" y="310" width="210" height="60" rx="3" fill="rgba(224,161,90,.12)" stroke="rgba(224,161,90,.85)" stroke-width="1.4"/>
+          <text x="405" y="336" font-size="13" fill="#eef3fa" text-anchor="middle">执行器</text>
+          <text x="405" y="355" font-size="10" fill="#74829a" text-anchor="middle">闸门 · 泵组 · 定子</text>
+
+          <!-- 被控过程 -->
+          <rect x="300" y="440" width="210" height="60" rx="3" fill="rgba(95,208,168,.12)" stroke="rgba(95,208,168,.85)" stroke-width="1.4"/>
+          <text x="405" y="466" font-size="13" fill="#eef3fa" text-anchor="middle">被控过程</text>
+          <text x="405" y="485" font-size="10" fill="#74829a" text-anchor="middle">真空度 · 舱体运动</text>
+
+          <!-- 传感器 -->
+          <rect x="60" y="282" width="160" height="62" rx="3" fill="rgba(111,211,230,.10)" stroke="rgba(111,211,230,.85)" stroke-width="1.4"/>
+          <text x="140" y="308" font-size="13" fill="#eef3fa" text-anchor="middle">传感器</text>
+          <text x="140" y="327" font-size="10" fill="#74829a" text-anchor="middle">真空 · 位置 · 位移</text>
+
+          <!-- 控制行为（红） -->
+          <g stroke="#e08a8a" stroke-width="1.7" marker-end="url(#ca)" fill="none">
+            <line x1="405" y1="98" x2="405" y2="166"/>
+            <line x1="405" y1="240" x2="405" y2="306"/>
+            <line x1="405" y1="370" x2="405" y2="436"/>
+          </g>
+          <text x="416" y="136" font-size="10.5" fill="#e08a8a">发车 / 限速 / 封段</text>
+          <text x="416" y="278" font-size="10.5" fill="#e08a8a">闸门 / 泵 / 功率</text>
+
+          <!-- 被控过程 → 传感器 -->
+          <g stroke="#5fd0a8" stroke-width="1.7" marker-end="url(#fb)" fill="none">
+            <path d="M300 472 H 140 V 348"/>
+          </g>
+          <!-- 传感器 → 区段控制器 -->
+          <g stroke="#5fd0a8" stroke-width="1.7" marker-end="url(#fb)" fill="none">
+            <path d="M140 282 V 205 H 296"/>
+          </g>
+          <!-- 区段控制器 → 调度中心（状态上报） -->
+          <g stroke="#5fd0a8" stroke-width="1.7" marker-end="url(#fb)" fill="none">
+            <path d="M510 205 H 560 V 66 H 514"/>
+          </g>
+          <text x="228" y="200" font-size="10.5" fill="#5fd0a8" text-anchor="end">反馈 · 实测状态</text>
+          <text x="566" y="140" font-size="10.5" fill="#5fd0a8">状态上报</text>
+
+          <!-- 环境 -->
+          <rect x="742" y="34" width="140" height="466" rx="4" fill="rgba(95,208,168,.06)"
+                stroke="rgba(95,208,168,.45)" stroke-dasharray="6 6"/>
+          <text x="812" y="60" font-size="12" fill="#5fd0a8" text-anchor="middle">环境</text>
+          <text x="812" y="92" font-size="10" fill="#74829a" text-anchor="middle">地震 · 沉降</text>
+          <text x="812" y="112" font-size="10" fill="#74829a" text-anchor="middle">供电 · 天气</text>
+          <text x="812" y="132" font-size="10" fill="#74829a" text-anchor="middle">其他交通</text>
+
+          <g stroke="rgba(95,208,168,.55)" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#fb)" fill="none">
+            <path d="M742 66 H 514"/>
+            <path d="M742 470 H 514"/>
+          </g>
+          <text x="628" y="58" font-size="10.5" fill="#74829a">法规 / 外部指令</text>
+          <text x="628" y="462" font-size="10.5" fill="#74829a">扰动</text>
+        </svg>
+        <figcaption>控制结构 · 调度中心 → 区段控制器 → 执行器 → 被控过程，传感器构成反馈回路；红色为控制行为，绿色为反馈</figcaption>
+      </figure>
+
+      <p class="note">
+        <b>为什么这张图重要</b>：STPA 不关心"部件会不会坏"，而关心"控制器在错误的信息下做了什么"。
+        图中每一个红色箭头，都是一个可能产生不安全控制行为的位置。
+      </p>
+    </section>
+
+    <!-- 04 STPA -->
+    <section class="sec" id="stpa">
+      <p class="label"><i>04</i> STPA 系统理论过程分析</p>
+      <h2>四步法</h2>
+      <p>
+        STPA 基于控制论：事故往往不是"某个零件坏了"，而是<strong>控制器没有施加应有的约束</strong>。
+        按 SAE J3187 的四步推进。
+      </p>
+
+      <div class="tbl">
+        <table>
+          <caption>STPA 四步与本节产出</caption>
+          <thead><tr><th>步骤</th><th>内容</th><th>产出</th></tr></thead>
+          <tbody>
+            <tr><td><b>Step 1</b></td><td>定义分析目的：识别损失（Loss）与危险（Hazard），划定系统边界</td><td>L / H 清单</td></tr>
+            <tr><td><b>Step 2</b></td><td>建立控制结构</td><td>见上一节框图</td></tr>
+            <tr><td><b>Step 3</b></td><td>识别不安全控制行为（UCA）</td><td>UCA 表</td></tr>
+            <tr><td><b>Step 4</b></td><td>识别损失场景</td><td>场景表 → 安全需求</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3><span class="no">4.1</span>损失与危险</h3>
+      <div class="tbl">
+        <table>
+          <caption>Step 1 · 损失（L）与危险（H）</caption>
+          <thead><tr><th>编号</th><th>损失 / 危险</th><th>说明</th></tr></thead>
+          <tbody>
+            <tr><td class="id">L-1</td><td>人员伤亡</td><td>管段失压、火灾、挤压造成的乘客或作业人员伤亡</td></tr>
+            <tr><td class="id">L-2</td><td>重大设备损失</td><td>舱体、管段、泵组损毁，单段报废并牵连相邻段</td></tr>
+            <tr><td class="id">L-3</td><td>运输服务长时间中断</td><td>全线停运，跨洲通道失效</td></tr>
+            <tr><td class="id">L-4</td><td>生态与公众信任损失</td><td>海底泄漏、生态事故引发社会反对</td></tr>
+            <tr><td class="id">H-1</td><td>管内真空度劣化到危及舱体与人员</td><td>漏点未及时隔离，压力扩散到相邻段</td></tr>
+            <tr><td class="id">H-2</td><td>舱体速度失控或两舱间距不足</td><td>推进或制动异常，造成追尾</td></tr>
+            <tr><td class="id">H-3</td><td>闸门在舱体经过时闭合</td><td>直接导致结构破坏与人员伤亡</td></tr>
+            <tr><td class="id">H-4</td><td>站内气闸误开</td><td>站点与真空段之间失压，站内人员暴露</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3><span class="no">4.2</span>不安全控制行为</h3>
+      <p>
+        按标准句式对每个控制行为问四类问题：<b>不该给的给了</b>（未提供 / provided）、
+        <b>给了不安全的</b>（incorrect / unsafe）、<b>不给或给晚了</b>（not provided / too late）、
+        <b>给早了或给停了</b>（too early / stopped too soon）。
+      </p>
+      <div class="tbl">
+        <table>
+          <caption>Step 3 · 不安全控制行为（UCA）</caption>
+          <thead><tr><th>编号</th><th>控制器</th><th>控制行为</th><th>类型</th><th>描述</th><th>关联危险</th></tr></thead>
+          <tbody>
+            <tr><td class="id">UCA-1</td><td>区段控制器</td><td>开闭隔离闸门</td><td>不该闭时闭</td><td>舱体未通过时闸门被指令闭合</td><td>H-3 / L-1</td></tr>
+            <tr><td class="id">UCA-2</td><td>区段控制器</td><td>开闭隔离闸门</td><td>该闭未闭</td><td>检出真空异常后闸门未在时限内闭合</td><td>H-1 / L-2</td></tr>
+            <tr><td class="id">UCA-3</td><td>区段控制器</td><td>启停真空泵</td><td>该开未开</td><td>某区段漏率上升时未启动冗余泵组</td><td>H-1</td></tr>
+            <tr><td class="id">UCA-4</td><td>区段控制器</td><td>注入推进功率</td><td>给了过大的</td><td>舱体已接近最小安全间距时仍在加速</td><td>H-2 / L-1</td></tr>
+            <tr><td class="id">UCA-5</td><td>调度中心</td><td>下发发车指令</td><td>不该给时给</td><td>基于不新鲜的真空状态数据放行发车</td><td>H-1</td></tr>
+            <tr><td class="id">UCA-6</td><td>调度中心</td><td>下发限速 / 封段</td><td>给得太晚</td><td>已知降级却延迟封段，舱体已进入异常段</td><td>H-1 / H-3</td></tr>
+            <tr><td class="id">UCA-7</td><td>车站控制</td><td>打开气闸</td><td>不该开时开</td><td>舱体未完全对接时气闸开门</td><td>H-4 / L-1</td></tr>
+            <tr><td class="id">UCA-8</td><td>舱体控制</td><td>维持悬浮</td><td>提前停止</td><td>供电或冷却中断后提前失去悬浮</td><td>H-2 / L-2</td></tr>
+            <tr><td class="id">UCA-9</td><td>传感器反馈</td><td>向控制器提供真空度</td><td>提供了错误的</td><td>传感漂移未被校准，触发错误判断</td><td>H-1 / H-3</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3><span class="no">4.3</span>损失场景</h3>
+      <div class="tbl">
+        <table>
+          <caption>Step 4 · 损失场景（从 UCA 推导到根因）</caption>
+          <thead><tr><th>编号</th><th>对应 UCA</th><th>场景</th><th>可能的根因</th></tr></thead>
+          <tbody>
+            <tr><td class="id">SC-A</td><td>UCA-1</td><td>调度给出封段指令，区段控制器在舱体进入隔离段后执行闭合</td><td>控制器缺乏舱体位置的一手信息，或位置反馈延迟</td></tr>
+            <tr><td class="id">SC-B</td><td>UCA-2 / UCA-3</td><td>漏率小幅上升未超阈值，泵组未被启动，漏点扩大后才被发现</td><td>阈值设置过宽；分段监测粒度不足</td></tr>
+            <tr><td class="id">SC-C</td><td>UCA-5</td><td>真空数据因传感漂移显示正常，实际已劣化，仍放行发车</td><td>单一传感源、无交叉校验</td></tr>
+            <tr><td class="id">SC-D</td><td>UCA-6</td><td>降级状态需要在多级之间确认，确认链路过长导致封段延迟</td><td>决策权限分散、缺少自动降级逻辑</td></tr>
+            <tr><td class="id">SC-E</td><td>UCA-7</td><td>气闸门锁与对接检测相互独立，未做互锁校验</td><td>接口定义缺互锁约束</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 05 安全需求 -->
+    <section class="sec" id="safety">
+      <p class="label"><i>05</i> 安全需求与安全架构 / SAFETY</p>
+      <h2>从 UCA 反推安全要求</h2>
+      <p>
+        每一条 UCA 都应被一条安全需求"堵住"，并落到架构上的一个具体机制。
+        这就是安全架构：不是加一个安全模块，而是把约束嵌进控制回路。
+      </p>
+
+      <div class="tbl">
+        <table>
+          <caption>安全需求（SR-S）与对应架构机制</caption>
+          <thead><tr><th>编号</th><th>安全需求</th><th>针对</th><th>架构机制</th></tr></thead>
+          <tbody>
+            <tr><td class="id">SR-S-01</td><td>闸门闭合前，系统应确认该隔离段内无舱体</td><td>UCA-1 / SC-A</td><td>闸门与区段占用检测硬互锁，位置反馈双通道</td></tr>
+            <tr><td class="id">SR-S-02</td><td>漏率超限时，系统应自动闭合对应闸门，不经人工确认</td><td>UCA-2 / SC-B</td><td>区段控制器内置自动隔离逻辑，人工指令不得覆盖</td></tr>
+            <tr><td class="id">SR-S-03</td><td>真空抽气系统应具备冗余，单泵失效仍可维持</td><td>UCA-3</td><td>每隔离段至少两台泵，互为备份</td></tr>
+            <tr><td class="id">SR-S-04</td><td>舱体间距低于安全值时，系统应禁止施加推进功率</td><td>UCA-4</td><td>推进指令经安全门控，间距优先</td></tr>
+            <tr><td class="id">SR-S-05</td><td>发车许可应基于在规定时限内有效且交叉校验的真空数据</td><td>UCA-5 / SC-C</td><td>双源传感 + 数据新鲜度校验，超期自动拒绝发车</td></tr>
+            <tr><td class="id">SR-S-06</td><td>降级状态应由系统自动判定并立即生效，不依赖人工确认链</td><td>UCA-6 / SC-D</td><td>自动降级逻辑 + 状态广播</td></tr>
+            <tr><td class="id">SR-S-07</td><td>气闸门应在对接完成且压力平衡后方可开启</td><td>UCA-7 / SC-E</td><td>对接检测与门锁硬互锁</td></tr>
+            <tr><td class="id">SR-S-08</td><td>悬浮失效前应具备可预测的受控减速过程</td><td>UCA-8</td><td>储能与受控降落策略</td></tr>
+            <tr><td class="id">SR-S-09</td><td>关键传感应交叉校验，单源异常不得触发控制动作</td><td>UCA-9</td><td>三取二表决</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>安全架构的三个原则</h3>
+      <div class="cards">
+        <div class="card">
+          <h4>约束内嵌</h4>
+          <p>安全约束放进控制回路本身（互锁、门控、表决），而不是事后加一道检查流程。</p>
+        </div>
+        <div class="card">
+          <h4>失效可控</h4>
+          <p>任一单点失效只降级、不连锁；隔离段是失效传播的物理边界。</p>
+        </div>
+        <div class="card">
+          <h4>自动优先于人工</h4>
+          <p>安全关键动作（隔离、拒发）由系统自动完成，人工只保留"更保守"的方向。</p>
+        </div>
+      </div>
+
+      <p class="note danger">
+        <b>需要说明的边界</b>：本节 STPA 只在概念层做定性分析，UCA 与场景取自公开方法框架下的小组推演，
+        未经专家评审，也缺少定量失效数据。它证明的是"我们识别出了哪些控制风险"，
+        而不是"这些风险已被消除"。
+      </p>
+    </section>
+
+    <!-- 06 参考资料 -->
+    <section class="sec" id="bib">
+      <p class="label"><i>06</i> 参考资料 / REFERENCES</p>
+      <h2>引用来源</h2>
+      <p>本页的方法、框架与定义，来源如下。访问日期：2026 年 11 月。</p>
+
+      <ol class="bib">
+        <li>ISO/IEC/IEEE 29148:2018, <i>Systems and software engineering — Life cycle processes — Requirements engineering</i>.
+          本页 SyRS 的章节结构直接取自该标准 <b>第 9.5 节「System requirements specification (SyRS) content」</b>
+          （9.5.2 System purpose 至 9.5.19 Assumptions and dependencies，标准第 64–68 页），
+          第一节的条款索引表与标准条款逐一对应；各条需求的<u>内容</u>为小组撰写，非标准原文。
+          <a href="https://standards.ieee.org/ieee/29148/6937/">IEEE 标准页面</a>（付费文档，仅按条款号引用）
+        </li>
+        <li>ISO/IEC/IEEE 15288:2023, <i>Systems and software engineering — System life cycle processes</i>.
+          系统需求定义过程与架构定义过程的活动划分。仅按标准编号引用。
+        </li>
+        <li>SAE J3187:2022, <i>System Theoretic Process Analysis (STPA) Recommended Practices for Evaluations of Automotive Related Safety-Critical Systems</i>.
+          STPA 四步法（定义目的、建模控制结构、识别 UCA、识别损失场景）依据该推荐实践。
+        </li>
+        <li>Leveson N., Thomas J. <i>STPA Handbook</i>, 2018.
+          STPA 方法原始出处，课程课件中的方法示意图引自该书（图 1）。
+        </li>
+        <li>课程课件：《5-系统工程开发过程2-复杂系统工程2026》，张玉新，2026。
+          第 5 章系统定义（系统需求定义 / 架构定义 / 设计定义）、系统建模与系统分析专题（MBSE、SAE J3187 与 STPA）。
+          课件第 18 页引用"表5-1 ISO/IEC/IEEE 29148:2018 标准中的 SyRS 范例"，该表即标准 9.5 节的整理版；
+          课件未附带表内逐条内容，本页结构以标准 9.5 节原文为准。
+        </li>
+        <li>郑新华, 何强, 王国新.《系统工程：基于国际标准过程的研究与实践》第 2 版. 机械工业出版社.
+          第 5 章「系统定义」包含 5.1 系统需求定义过程、5.2 系统架构定义过程、5.3 设计定义过程、5.4 系统分析过程，
+          为本页"系统定义与分析"的四过程框架依据。
+          <a href="https://ebooks.cmpbook.com/detail?id=29098">出版社电子书页（目录）</a>
+        </li>
+        <li>本站《作业二 · 业务需求与相关方需求》. <a href="./hw2.html">hw2.html</a> ——
+          本页的系统需求与安全需求均向上追溯到该页的 UR-01～UR-10 与 SC-01～SC-06。
+        </li>
+      </ol>
+
+      <p class="note">
+        <b>口径说明</b>：一、29148:2018 为付费标准，本页只引用其条款编号与结构，未复制标准原文；
+        二、本页所有 UCA、场景与安全需求均为小组推演结果，属概念阶段定性分析，不是正式安全论证；
+        三、架构图为示意，非施工图或详细设计。
+      </p>
+    </section>
+
+    <footer class="end">
+      <p>作业三 · 2026 · 系统需求定义 / 架构定义 / STPA 安全分析</p>
+      <p><a href="./project.html">← 返回项目主页</a> ｜ <a href="./hw1.html">作业一</a> ｜ <a href="./hw2.html">作业二</a> ｜ <a href="./index.html">个人主页</a></p>
+    </footer>
+  </div>
+
+  <script>
+    (function () {
+      var links = Array.prototype.slice.call(document.querySelectorAll('.nav a.item'));
+      var secs = links.map(function (a) { return document.querySelector(a.getAttribute('href')); });
+      function setActive(id) {
+        links.forEach(function (a) { a.classList.toggle('active', a.getAttribute('href') === '#' + id); });
+      }
+      if ('IntersectionObserver' in window) {
+        var io = new IntersectionObserver(function (entries) {
+          entries.forEach(function (e) { if (e.isIntersecting) setActive(e.target.id); });
+        }, { rootMargin: '-40% 0px -52% 0px', threshold: 0 });
+        secs.forEach(function (s) { if (s) io.observe(s); });
+      }
+      links.forEach(function (a) {
+        a.addEventListener('click', function (e) {
+          var id = a.getAttribute('href').slice(1);
+          var t = document.getElementById(id);
+          if (!t) return;
+          e.preventDefault();
+          var top = t.getBoundingClientRect().top + window.pageYOffset - 58;
+          window.scrollTo({ top: top, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+          if (history.replaceState) history.replaceState(null, '', '#' + id);
+          setActive(id);
+        });
+      });
+      var reveals = document.querySelectorAll('.reveal');
+      if ('IntersectionObserver' in window) {
+        var ro = new IntersectionObserver(function (entries) {
+          entries.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('in'); ro.unobserve(e.target); } });
+        }, { rootMargin: '0px 0px -8% 0px', threshold: 0.05 });
+        reveals.forEach(function (el) { ro.observe(el); });
+      } else {
+        reveals.forEach(function (el) { el.classList.add('in'); });
+      }
+    })();
+  </script>
+</body>
+</html>
