@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>作业四 · 场景分层与运行设计条件｜真空管道运输系统</title>
+<style>
+  /* ============================================================
+     作业四：场景分层（六层）+ 场景抽象四级 + ODC + 典型场景 + 风险场景
+     场景分层/ODD/ODC 依据课件第 18–21 页；四级抽象依据 ISO 34501
+     ============================================================ */
+  :root {
+    --bg:    #04070d;
+    --bg-2:  #070c16;
+    --ink:   #eef3fa;
+    --dim:   #a9b7ca;
+    --muted: #74829a;
+    --blue:  #5b9dff;
+    --cyan:  #6fd3e6;
+    --green: #5fd0a8;
+    --warm:  #e0a15a;
+    --red:   #e08a8a;
+    --line:  rgba(238, 243, 250, 0.10);
+    --line-2:rgba(238, 243, 250, 0.22);
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI",
+            "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    --mono: ui-monospace, SFMono-Regular, Consolas, "Cascadia Mono", monospace;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 62px; }
+  body { margin: 0; background: var(--bg); color: var(--dim); font-family: var(--sans);
+         line-height: 1.9; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+
+  .aura {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(65% 40% at 50% -8%, rgba(91,157,255,.18) 0%, transparent 70%),
+      radial-gradient(45% 35% at 88% 8%, rgba(111,211,230,.09) 0%, transparent 70%),
+      linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 100%);
+  }
+  .aura::after {
+    content: ""; position: absolute; inset: 0;
+    background-image:
+      linear-gradient(to right, rgba(238,243,250,.032) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(238,243,250,.032) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(110% 80% at 50% 0%, #000 25%, transparent 80%);
+    -webkit-mask-image: radial-gradient(110% 80% at 50% 0%, #000 25%, transparent 80%);
+  }
+
+  .nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+    display: flex; align-items: center; gap: 14px;
+    height: 58px; padding: 0 clamp(14px, 3.4vw, 40px);
+    background: rgba(4,7,13,.84); border-bottom: 1px solid var(--line);
+    -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  }
+  .brand { display: flex; align-items: baseline; gap: 10px; color: var(--ink); text-decoration: none; white-space: nowrap; flex: none; }
+  .brand b { font-size: 13.5px; font-weight: 600; letter-spacing: .06em; }
+  .brand span { font-family: var(--mono); font-size: 10px; letter-spacing: .16em; color: var(--muted); }
+  .home { flex: none; padding: 5px 12px; font-size: 11.5px; color: var(--cyan); text-decoration: none;
+          border: 1px solid rgba(111,211,230,.4); border-radius: 2px; white-space: nowrap; transition: background .2s, border-color .2s; }
+  .home:hover { background: rgba(111,211,230,.14); border-color: rgba(111,211,230,.75); }
+  .nav ul { display: flex; align-items: center; gap: clamp(9px, 1.6vw, 20px); margin: 0 0 0 auto; padding: 0;
+            list-style: none; overflow-x: auto; scrollbar-width: none; }
+  .nav ul::-webkit-scrollbar { display: none; }
+  .nav a.item { position: relative; display: block; padding: 6px 0; font-size: 12px; color: var(--muted);
+                text-decoration: none; white-space: nowrap; transition: color .2s; }
+  .nav a.item::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1.5px;
+                background: var(--blue); transform: scaleX(0); transform-origin: left; transition: transform .25s; }
+  .nav a.item:hover { color: var(--dim); }
+  .nav a.item.active { color: var(--ink); }
+  .nav a.item.active::after { transform: scaleX(1); }
+
+  .wrap { position: relative; z-index: 1; max-width: 1000px; margin: 0 auto; padding: 0 clamp(16px, 3.6vw, 30px); }
+
+  .hero { padding: clamp(92px, 14vh, 150px) 0 clamp(38px, 6vh, 60px); }
+  .eyebrow { margin: 0 0 20px; font-family: var(--mono); font-size: 10.5px; letter-spacing: .30em; color: var(--cyan); }
+  h1 { margin: 0; font-size: clamp(25px, 4vw, 42px); line-height: 1.45; font-weight: 600; color: var(--ink); text-wrap: balance; }
+  h1 .accent { color: var(--blue); }
+  .lede { margin: 22px 0 0; max-width: 40em; font-size: 15.5px; line-height: 2; color: #c3cedc; }
+  .facts { display: flex; flex-wrap: wrap; gap: 10px 34px; margin: 32px 0 0; padding: 16px 0 0;
+           border-top: 1px solid var(--line); list-style: none; font-family: var(--mono);
+           font-size: 10.5px; letter-spacing: .10em; color: var(--muted); }
+  .facts b { color: var(--ink); font-weight: 500; margin-left: 8px; }
+
+  section.sec { padding: clamp(46px, 8vh, 82px) 0; border-top: 1px solid var(--line); scroll-margin-top: 60px; }
+  .label { display: flex; align-items: center; gap: 12px; margin: 0 0 10px; font-family: var(--mono);
+           font-size: 10.5px; letter-spacing: .26em; color: var(--muted); }
+  .label i { font-style: normal; color: var(--blue); }
+  h2 { margin: 0 0 8px; font-size: clamp(21px, 3vw, 29px); font-weight: 600; color: var(--ink); text-wrap: balance; }
+  .sub { margin: 0 0 20px; font-size: 13px; color: var(--muted); }
+  .sec > p { max-width: 44em; margin: 0 0 1em; font-size: 14.5px; line-height: 2; }
+  .sec > p strong { color: var(--ink); font-weight: 600; }
+
+  h3 { margin: 30px 0 10px; font-size: 15.5px; font-weight: 600; color: var(--ink); letter-spacing: .03em; }
+  h3 .no { font-family: var(--mono); font-size: 12px; color: var(--blue); margin-right: 10px; font-weight: 400; }
+  h4 { margin: 20px 0 6px; font-size: 14px; font-weight: 600; color: var(--cyan); }
+
+  ul.pts { margin: 10px 0 0; padding: 0; list-style: none; }
+  ul.pts li { position: relative; margin: 0 0 9px; padding-left: 20px; font-size: 14px; line-height: 1.95; }
+  ul.pts li::before { content: ""; position: absolute; left: 0; top: .78em; width: 7px; height: 1px; background: var(--cyan); }
+  ul.pts li b { color: var(--ink); font-weight: 600; }
+
+  .tbl { margin: 18px 0 0; overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 640px; }
+  caption { caption-side: top; text-align: left; padding-bottom: 8px; font-family: var(--mono);
+            font-size: 10px; letter-spacing: .12em; color: var(--muted); }
+  th, td { padding: 10px 12px 10px 0; text-align: left; vertical-align: top;
+           border-bottom: 1px solid var(--line); line-height: 1.75; }
+  th { font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; color: var(--muted);
+       font-weight: 400; white-space: nowrap; }
+  td b { color: var(--ink); font-weight: 600; }
+  td.id { font-family: var(--mono); font-size: 11px; color: var(--blue); white-space: nowrap; }
+
+  .note { margin: 22px 0 0; padding: 14px 18px; border-left: 2px solid var(--blue);
+          background: rgba(91,157,255,.06); font-size: 13px; line-height: 1.9; color: #bcc9da; }
+  .note b { color: var(--ink); }
+  .note.warn { border-left-color: var(--warm); background: rgba(224,161,90,.07); }
+  .note.danger { border-left-color: var(--red); background: rgba(224,138,138,.07); }
+  .cite { margin: 8px 0 0; font-size: 11.5px; color: #7d8ba0; line-height: 1.7; }
+
+  figure.fig { margin: 22px 0 0; padding: 18px; border: 1px solid var(--line-2); background: rgba(255,255,255,.02); }
+  figure.fig svg { display: block; width: 100%; height: auto; }
+  figcaption { margin-top: 12px; font-size: 11.5px; line-height: 1.75; color: var(--muted); }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin: 18px 0 0; }
+  .card { padding: 16px 18px; border: 1px solid var(--line); background: rgba(255,255,255,.022); }
+  .card h4 { margin: 0 0 5px; font-size: 12.5px; color: var(--cyan); }
+  .card p { margin: 0; font-size: 12.5px; line-height: 1.8; }
+
+  .bib { margin: 18px 0 0; padding-left: 24px; font-size: 12.5px; line-height: 1.95; }
+  .bib li { margin-bottom: 9px; }
+  .bib li::marker { color: var(--blue); font-family: var(--mono); font-size: 11px; }
+  .bib a { color: #8fb0d8; text-decoration: none; border-bottom: 1px dotted rgba(143,176,216,.5); word-break: break-all; }
+  .bib a:hover { color: #cfe3ff; }
+
+  .end { position: relative; z-index: 1; padding: 42px 0 52px; border-top: 1px solid var(--line);
+         font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em; color: var(--muted); }
+  .end p { margin: 0 0 8px; }
+  .end a { color: var(--blue); text-decoration: none; }
+  .end a:hover { color: var(--ink); }
+
+  a:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .reveal { opacity: 0; transform: translateY(12px); transition: opacity .6s ease, transform .6s cubic-bezier(.22,.68,.2,1); }
+    .reveal.in { opacity: 1; transform: none; }
+  }
+  @media (max-width: 760px) {
+    .nav { height: auto; padding: 9px 12px; flex-wrap: wrap; gap: 8px; }
+    .brand b { font-size: 12.5px; }
+    .nav ul { width: 100%; }
+    .nav a.item { font-size: 11.5px; }
+    section.sec { scroll-margin-top: 96px; }
+  }
+</style>
+</head>
+<body>
+  <div class="aura" aria-hidden="true"></div>
+
+  <nav class="nav" aria-label="章节导航">
+    <a class="brand" href="#top"><b>作业四</b><span>SCENARIO / ODC</span></a>
+    <a class="home" href="./project.html">← 项目主页</a>
+    <ul>
+      <li><a class="item" href="#brief">作业说明</a></li>
+      <li><a class="item" href="#layer">场景分层</a></li>
+      <li><a class="item" href="#odc">运行条件</a></li>
+      <li><a class="item" href="#case">典型场景</a></li>
+      <li><a class="item" href="#risk">风险场景</a></li>
+      <li><a class="item" href="#scenes">场景清单</a></li>
+      <li><a class="item" href="#bib">参考资料</a></li>
+    </ul>
+  </nav>
+
+  <header class="hero" id="top">
+    <div class="wrap">
+      <p class="eyebrow">作业四 · 基于场景的系统工程</p>
+      <h1>场景分层、运行设计条件<br />与<span class="accent">典型场景风险分析</span></h1>
+      <p class="lede">
+        对象系统：真空管道运输系统。本页把系统所处环境拆成六层场景、梳理各层要素，
+        用 ISO 34501 的四级抽象把典型场景从"一句话"收敛到"可测的具体参数"，
+        再设定正常运行条件（ODC），最后做安全风险分析。
+      </p>
+      <ul class="facts">
+        <li>方法<b>六层分层 / 四级抽象</b></li>
+        <li>典型场景<b>洲际客运直达</b></li>
+        <li>输出<b>ODC + 风险场景列表</b></li>
+      </ul>
+    </div>
+  </header>
+
+  <div class="wrap">
+
+    <!-- 00 作业说明 -->
+    <section class="sec" id="brief">
+      <p class="label"><i>00</i> 作业说明 / BRIEF</p>
+      <h2>这一步要回答什么</h2>
+      <p>
+        前几次回答的是"系统要什么""长什么样""算什么正常"。这一次把"正常运行"进一步拆细：
+        <strong>环境分成几层、每层有什么要素、哪些组合仍在设计范围内、越界了会怎样</strong>。
+      </p>
+
+      <div class="cards">
+        <div class="card">
+          <h4>两个维度</h4>
+          <p><b>横向分层</b>（六层：物理环境到信息环境）与<b>纵向抽象</b>（功能→抽象→逻辑→具体）交织，才构成可用的场景模型。</p>
+        </div>
+        <div class="card">
+          <h4>术语对应</h4>
+          <p>ODD＝外部环境条件；ODC＝ODD＋系统状态＋人员状态。二者都来自课程第 18 页定义。</p>
+        </div>
+        <div class="card">
+          <h4>与前后作业的关系</h4>
+          <p>承接作业一的分段闸门与胶囊、作业二的运营模式、作业三的 UCA；是后续测试用例的输入。</p>
+        </div>
+      </div>
+
+      <p class="cite">
+        依据：[1] 课程《7-基于场景的系统工程》第 18–21 页（ODD / ODC 定义与场景分层六层）、
+        第 35 页（场景四类来源）、第 120 页作业要求；
+        [2] ISO 34501:2022 场景四级抽象（功能 / 抽象 / 逻辑 / 具体）；
+        [3] ISO 34502:2022 基于场景的安全评价框架；
+        [4] GB 50490-2009《城市轨道交通技术规范》第 7.3.2 条（6 min 疏散）、第 7.3.22 条（联络通道间距 ≤600 m），
+        作为本项目疏散与通道密度的量级参照；
+        [5] 本站《作业一》与《作业三》对系统的技术设定与安全需求。
+      </p>
+    </section>
+
+    <!-- 01 场景分层 -->
+    <section class="sec" id="layer">
+      <p class="label"><i>01</i> 场景分层 / LAYERS &amp; ABSTRACTION</p>
+      <h2>横向六层 × 纵向四级</h2>
+      <p>
+        课程第 21 页给出六层分法，ISO 34501 给出四级抽象。两者是<strong>两个不同维度</strong>：
+        分层回答"环境由哪些部分组成"，抽象回答"同一个场景描述到什么精度"。
+        只用分层，场景无法落到可测参数；只用抽象，会漏掉环境层。
+      </p>
+
+      <figure class="fig reveal">
+        <svg viewBox="0 0 900 490" role="img" aria-label="六层场景分层模型">
+          <g font-size="13">
+            <rect x="60" y="26" width="780" height="58" rx="3" fill="rgba(111,211,230,.10)" stroke="rgba(111,211,230,.55)"/>
+            <text x="80" y="50" fill="#eef3fa" font-weight="600">① 管廊拓扑层</text>
+            <text x="80" y="70" font-size="11" fill="#8fa3b8">环线／分支、浅埋／海底／极区、坡度、管径、隔离段长度</text>
+            <text x="700" y="62" font-size="10" fill="#6fd3e6" font-family="ui-monospace,Consolas,monospace">L1</text>
+
+            <rect x="74" y="92" width="752" height="58" rx="3" fill="rgba(111,211,230,.09)" stroke="rgba(111,211,230,.50)"/>
+            <text x="94" y="116" fill="#eef3fa" font-weight="600">② 标识与设施层</text>
+            <text x="94" y="136" font-size="11" fill="#8fa3b8">大洲站／中转站、气闸、疏散通道、闸门与泵站编号、检修口</text>
+            <text x="700" y="128" font-size="10" fill="#6fd3e6" font-family="ui-monospace,Consolas,monospace">L2</text>
+
+            <rect x="88" y="158" width="724" height="58" rx="3" fill="rgba(111,211,230,.08)" stroke="rgba(111,211,230,.45)"/>
+            <text x="108" y="182" fill="#eef3fa" font-weight="600">③ 临时变更层</text>
+            <text x="108" y="202" font-size="11" fill="#8fa3b8">天窗检修、限速令、临时封段、闸门检修、施工扰动（对应作业一分期建设）</text>
+            <text x="700" y="194" font-size="10" fill="#6fd3e6" font-family="ui-monospace,Consolas,monospace">L3</text>
+
+            <rect x="102" y="224" width="696" height="58" rx="3" fill="rgba(91,157,255,.10)" stroke="rgba(91,157,255,.55)"/>
+            <text x="122" y="248" fill="#eef3fa" font-weight="600">④ 交通参与者层</text>
+            <text x="122" y="268" font-size="11" fill="#8fa3b8">客运／货运胶囊、运维人员、相邻舱体间距、站内客流</text>
+            <text x="700" y="260" font-size="10" fill="#5b9dff" font-family="ui-monospace,Consolas,monospace">L4</text>
+
+            <rect x="116" y="290" width="668" height="58" rx="3" fill="rgba(91,157,255,.09)" stroke="rgba(91,157,255,.50)"/>
+            <text x="136" y="314" fill="#eef3fa" font-weight="600">⑤ 环境条件层</text>
+            <text x="136" y="334" font-size="11" fill="#8fa3b8">地层活动、海水压力与温度、地表气候、电磁环境、辐射</text>
+            <text x="700" y="326" font-size="10" fill="#5b9dff" font-family="ui-monospace,Consolas,monospace">L5</text>
+
+            <rect x="130" y="356" width="640" height="58" rx="3" fill="rgba(95,208,168,.10)" stroke="rgba(95,208,168,.55)"/>
+            <text x="150" y="380" fill="#eef3fa" font-weight="600">⑥ 网联与控制层</text>
+            <text x="150" y="400" font-size="11" fill="#8fa3b8">调度—区段控制器通信、真空与位置传感、跨洲联调、数据新鲜度</text>
+            <text x="700" y="392" font-size="10" fill="#5fd0a8" font-family="ui-monospace,Consolas,monospace">L6</text>
+          </g>
+          <text x="60" y="446" font-size="11" fill="#74829a">六层由"物理"到"信息"逐层收敛；每一层都可独立判断是否仍在设计范围内。</text>
+          <text x="60" y="468" font-size="11" fill="#74829a">L1–L3 相对稳定，L4–L6 是动态变化最频繁的部分，也是 ODC 最需要实时校验的部分。</text>
+        </svg>
+        <figcaption>横向分层 · 六层（分层结构参照课程第 21 页，要素为本项目迁移）</figcaption>
+      </figure>
+
+      <h3><span class="no">1.1</span>每层的场景要素</h3>
+      <div class="tbl">
+        <table>
+          <caption>逐层要素清单与归属判断</caption>
+          <thead><tr><th>层</th><th>具体要素</th><th>归属</th></tr></thead>
+          <tbody>
+            <tr><td><b>L1 管廊拓扑</b></td><td>环线／分支线、浅埋／海底／极区段、坡度与曲率、管径、隔离段长度与数量、分支接入点</td><td>ODD</td></tr>
+            <tr><td><b>L2 标识与设施</b></td><td>大洲站（每洲 1–2 座）、中转站、气闸位置、疏散通道、隔离闸门编号、真空泵组编号、检修口</td><td>ODD</td></tr>
+            <tr><td><b>L3 临时变更</b></td><td>计划天窗、临时限速、临时封段、闸门检修中、施工扰动、演示段试运行</td><td>ODD（动态）</td></tr>
+            <tr><td><b>L4 交通参与者</b></td><td>客运胶囊定员与实载、货运胶囊载重与货物类型、运维人员数量与位置、相邻舱体间距、站内客流密度</td><td>ODD ＋ 人员状态</td></tr>
+            <tr><td><b>L5 环境条件</b></td><td>地层位移量、海水深度与温度、地表气温、盐雾、电磁场强度、太阳活动扰动</td><td>ODD</td></tr>
+            <tr><td><b>L6 网联与控制</b></td><td>通信时延、断链、传感有效性、真空度读数、储能荷电、跨洲调度状态</td><td>系统状态</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3><span class="no">1.2</span>纵向四级抽象（ISO 34501）</h3>
+      <p>
+        ISO 34501 把场景描述分成四级，从"人能读懂的自然语言"收敛到"可直接执行的参数组合"。
+        本页的典型场景会沿这四级各写一遍。
+      </p>
+      <div class="tbl">
+        <table>
+          <caption>四级抽象的定义与本项目对应</caption>
+          <thead><tr><th>级别</th><th>定义</th><th>本项目的例子</th></tr></thead>
+          <tbody>
+            <tr><td><b>功能场景</b><br><span style="font-family:var(--mono);font-size:10px;color:var(--muted)">Functional</span></td><td>面向人的非形式化描述，不可机器读取</td><td>"乘客从 A 洲站直达 B 洲站，中途不停"</td></tr>
+            <tr><td><b>抽象场景</b><br><span style="font-family:var(--mono);font-size:10px;color:var(--muted)">Abstract</span></td><td>允许任意约束（范围、分布、跨属性依赖、位置与时机约束）</td><td>"在真空度正常且通信正常的前提下，完成一次洲际直达"</td></tr>
+            <tr><td><b>逻辑场景</b><br><span style="font-family:var(--mono);font-size:10px;color:var(--muted)">Logical</span></td><td>属性可在指定范围内取值</td><td>真空度 ∈ [允许区间]、巡航速度 ∈ [设计区间]、相邻舱距 ≥ 安全值</td></tr>
+            <tr><td><b>具体场景</b><br><span style="font-family:var(--mono);font-size:10px;color:var(--muted)">Concrete</span></td><td>所有属性取定值</td><td>某号线某段、某载荷、某速度、某时刻的一组确定参数</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="cite">四级抽象定义参照 [2] ISO 34501:2022；各级别的具体内涵参见 [7] Foretellix 对 ASAM/ISO 抽象层次的解释。</p>
+
+      <h3><span class="no">1.3</span>分层与抽象的交叉矩阵</h3>
+      <div class="tbl">
+        <table>
+          <caption>每个场景层在四个抽象级别上的"可判定性"</caption>
+          <thead><tr><th>层</th><th>功能级</th><th>抽象级</th><th>逻辑级</th><th>具体级</th></tr></thead>
+          <tbody>
+            <tr><td><b>L1 拓扑</b></td><td>跨洲直达</td><td>在同一环线上</td><td>某段长度区间内</td><td>具体管段编号</td></tr>
+            <tr><td><b>L5 环境</b></td><td>天气与地质正常</td><td>未超设防烈度</td><td>位移量 ≤ 阈值</td><td>某次实测值</td></tr>
+            <tr><td><b>L6 网联</b></td><td>通信顺畅</td><td>数据新鲜可用</td><td>时延 ≤ 上限</td><td>某毫秒值</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note">
+        <b>为什么要做这个交叉</b>：测试只能执行"具体场景"，而设计只能基于"抽象场景"。
+        把每一层都标出四个级别的形态，才知道从一个模糊需求到一条可执行用例中间差了几步。
+      </p>
+
+      <h3><span class="no">1.4</span>场景的三类来源</h3>
+      <p>
+        场景不是凭空写出来的。课程把场景来源归为四类：<b>标准法规</b>、<b>专家经验推理</b>、
+        <b>自然交通流</b>、<b>事故统计</b>。本项目的场景主要来自后两类与法规类，下面逐类给出本项目的具体来源。
+      </p>
+      <div class="tbl">
+        <table>
+          <caption>场景来源与我们的取材方式</caption>
+          <thead><tr><th>来源</th><th>在本项目中的对应</th><th>已识别场景</th></tr></thead>
+          <tbody>
+            <tr><td><b>标准法规</b></td><td>GB 50490-2009 疏散与联络通道间距、ISO 34501 场景定义、各法域跨境法规</td><td>SCN-01 正常运营、SCN-07 站台疏散（6 min 约束）</td></tr>
+            <tr><td><b>事故统计</b></td><td>隧道火灾、管廊泄漏、跨境口岸关闭等公开案例</td><td>SCN-03 单段失压、SCN-06 口岸关闭</td></tr>
+            <tr><td><b>专家经验推理</b></td><td>作业三 STPA 推导的 UCA 与 RainingDay 组合</td><td>SCN-04 悬浮失效、SCN-05 通信中断</td></tr>
+            <tr><td><b>自然运行</b></td><td>设计工况下的正常班次、峰值班次、科研窗口</td><td>SCN-01、SCN-02 科研窗口</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="cite">场景来源四分类参照 [1] 课程第 35 页「现有场景来源与场景挖掘」。</p>
+    </section>
+
+    <!-- 02 运行设计条件 -->
+    <section class="sec" id="odc">
+      <p class="label"><i>02</i> 运行设计条件 / ODC</p>
+      <h2>什么算"正常运行"</h2>
+      <p>
+        ODC 是设计时确定的、适用于系统功能运行的各类条件总称：
+        <strong>运行设计范围（ODD，外部条件）＋ 系统状态 ＋ 人员状态</strong>。
+        只要任一条越界，系统就应退出正常运营模式。
+      </p>
+
+      <h3><span class="no">2.1</span>运行设计范围 ODD</h3>
+      <div class="tbl">
+        <table>
+          <caption>ODD · 外部环境条件（越界即退出正常模式）</caption>
+          <thead><tr><th>维度</th><th>正常范围</th><th>越界示例</th><th>关联层</th></tr></thead>
+          <tbody>
+            <tr><td><b>线位与埋深</b></td><td>设计线位、已验收的埋深与坡度</td><td>偏离线位、超出设计坡度</td><td>L1</td></tr>
+            <tr><td><b>管段状态</b></td><td>所有隔离段处于正常范围且具备冗余</td><td>任一隔离段处于检修或无备用泵组</td><td>L1 L2 L3</td></tr>
+            <tr><td><b>真空度</b></td><td>处于设计允许区间，漏率可补抽</td><td>漏率上升、真空劣化</td><td>L6</td></tr>
+            <tr><td><b>地质活动</b></td><td>位移量在柔性接头吸收能力之内</td><td>超出波纹管接头行程（作业一 RS-08）</td><td>L5</td></tr>
+            <tr><td><b>温度与海况</b></td><td>设计温区内、海水压力在设计范围</td><td>极区极低温、海底段异常高温</td><td>L5</td></tr>
+            <tr><td><b>站点可用</b></td><td>起终点与途经站点可正常服务</td><td>站点封闭、气闸检修</td><td>L2</td></tr>
+            <tr><td><b>供电</b></td><td>持续供电且满足加速段峰值功率</td><td>断电、峰值功率不足</td><td>L6</td></tr>
+            <tr><td><b>通信</b></td><td>调度—区段控制器链路正常</td><td>断链或时延超过上限</td><td>L6</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3><span class="no">2.2</span>系统状态</h3>
+      <ul class="pts">
+        <li><b>悬浮与导向</b>：超导电动悬浮（EDS）为主、常导（EMS）备选，二者不可混线（作业一 05 节）。当前段处于可用状态。</li>
+        <li><b>推进与制动</b>：长定子分段供电正常，推进与制动可控。</li>
+        <li><b>真空系统</b>：主泵与备用泵均可启动，阀组可动作。</li>
+        <li><b>隔离闸门</b>：全部闸门可用，启闭时间在设计范围内。</li>
+        <li><b>传感与通信</b>：真空度、位置、位移四类传感双源有效，无数据过期。</li>
+        <li><b>储能</b>：荷电足以支撑一次完整减速或安全停靠。</li>
+        <li><b>热管理</b>：管壁散热能力与站点换热正常（真空无对流，作业一 04 节）。</li>
+      </ul>
+
+      <h3><span class="no">2.3</span>人员状态</h3>
+      <ul class="pts">
+        <li><b>乘客</b>：已就座并系约束、人数不超过额定量、无突发健康事件、无违规操作。</li>
+        <li><b>运维人员</b>：在允许作业区内、防护装备齐全、已取得作业许可（天窗内才可进入）。</li>
+        <li><b>调度员</b>：在岗、具备降级决策权限、未超时疲劳值班。</li>
+      </ul>
+
+      <h3><span class="no">2.4</span>越界处置原则</h3>
+      <div class="tbl">
+        <table>
+          <caption>三类条件越界与作业二五模式的对应</caption>
+          <thead><tr><th>越界类型</th><th>典型情形</th><th>系统处置</th><th>对应运行模式</th></tr></thead>
+          <tbody>
+            <tr><td>外部条件越界</td><td>地质位移、真空劣化、供电不足</td><td>退出正常模式，限速或封段</td><td>降级运营</td></tr>
+            <tr><td>系统状态越界</td><td>泵组失效、传感失效、储能不足</td><td>降级运行，必要时终止行程</td><td>降级运营 / 隔离检修</td></tr>
+            <tr><td>人员状态越界</td><td>乘客突发不适、运维人员越区</td><td>减速、站点待命、必要时停靠</td><td>应急处置</td></tr>
+            <tr><td>多类同时越界</td><td>失压叠加通信中断</td><td>自动封段并转入应急</td><td>应急处置 → 停运</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note warn">
+        <b>与作业三的一致性</b>：ODC 越界必须与作业三的五种运行模式严格对应，
+        不允许出现"条件越界但系统仍判为正常"的情形——这正是作业三中 UCA-5（基于过期数据放行）要堵住的漏洞。
+      </p>
+    </section>
+
+    <!-- 03 典型场景 -->
+    <section class="sec" id="case">
+      <p class="label"><i>03</i> 典型场景 / CASE</p>
+      <h2>洲际客运直达</h2>
+      <p>
+        选系统存在意义最核心的场景：<strong>两名乘客从 A 洲大洲站出发，直达 B 洲大洲站</strong>。
+        先按四级抽象各描述一遍，再按阶段展开。
+      </p>
+
+      <h3><span class="no">3.1</span>四级抽象描述</h3>
+      <div class="tbl">
+        <table>
+          <caption>同一场景的四个抽象级别</caption>
+          <thead><tr><th>级别</th><th>描述</th></tr></thead>
+          <tbody>
+            <tr><td><b>功能级</b></td><td>乘客在 A 洲大洲站登舱，全程不停站，抵达 B 洲大洲站后出舱。</td></tr>
+            <tr><td><b>抽象级</b></td><td>在真空、供电、通信均满足 ODC 的前提下，完成一次不经中转的洲际直达；<br>约束：起点终点均为大洲站，中间不经过任何站点。</td></tr>
+            <tr><td><b>逻辑级</b></td><td>真空度 ∈ [允许区间]、巡航速度 ∈ [设计区间]、<br>相邻舱体间距 ≥ 最小安全值、乘客加速度 ≤ 舒适阈值、<br>行驶管段全部处于"正常"隔离状态。</td></tr>
+            <tr><td><b>具体级</b></td><td>某具体管段、某型号客运胶囊、满载 N 人、某时刻发车，全程参数取定值（用于测试执行）。</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <figure class="fig reveal">
+        <svg viewBox="0 0 900 310" role="img" aria-label="典型场景时间轴：进站到出站">
+          <defs>
+            <marker id="tk" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto">
+              <path d="M0,0 L9,4.5 L0,9 z" fill="#5b9dff"/>
+            </marker>
+          </defs>
+          <line x1="40" y1="120" x2="850" y2="120" stroke="rgba(91,157,255,.5)" stroke-width="2" marker-end="url(#tk)"/>
+
+          <g>
+            <circle cx="100" cy="120" r="7" fill="#5b9dff"/>
+            <text x="100" y="100" font-size="12" fill="#eef3fa" text-anchor="middle">进站与安检</text>
+            <text x="100" y="148" font-size="10" fill="#74829a" text-anchor="middle">L4 · L6</text>
+
+            <circle cx="240" cy="120" r="7" fill="#5b9dff"/>
+            <text x="240" y="100" font-size="12" fill="#eef3fa" text-anchor="middle">气闸进舱</text>
+            <text x="240" y="148" font-size="10" fill="#74829a" text-anchor="middle">L2 · L4</text>
+
+            <circle cx="380" cy="120" r="7" fill="#6fd3e6"/>
+            <text x="380" y="100" font-size="12" fill="#eef3fa" text-anchor="middle">直线加速段</text>
+            <text x="380" y="148" font-size="10" fill="#74829a" text-anchor="middle">L1 · L5</text>
+
+            <circle cx="520" cy="120" r="7" fill="#6fd3e6"/>
+            <text x="520" y="100" font-size="12" fill="#eef3fa" text-anchor="middle">干线巡航</text>
+            <text x="520" y="148" font-size="10" fill="#74829a" text-anchor="middle">L1 · L5 · L6</text>
+
+            <circle cx="660" cy="120" r="7" fill="#5fd0a8"/>
+            <text x="660" y="100" font-size="12" fill="#eef3fa" text-anchor="middle">减速进站</text>
+            <text x="660" y="148" font-size="10" fill="#74829a" text-anchor="middle">L1 · L3</text>
+
+            <circle cx="800" cy="120" r="7" fill="#5fd0a8"/>
+            <text x="800" y="100" font-size="12" fill="#eef3fa" text-anchor="middle">气闸出舱</text>
+            <text x="800" y="148" font-size="10" fill="#74829a" text-anchor="middle">L2 · L4</text>
+          </g>
+
+          <g font-size="11" fill="#8fa3b8">
+            <text x="40" y="200">真空状态：</text>
+            <text x="160" y="200" fill="#5b9dff">站点大气压</text>
+            <text x="300" y="200">→</text>
+            <text x="340" y="200" fill="#6fd3e6">隔离段维持真空</text>
+            <text x="480" y="200">→</text>
+            <text x="520" y="200" fill="#5fd0a8">稳定真空巡航</text>
+            <text x="40" y="232">舱体状态：</text>
+            <text x="160" y="232" fill="#5b9dff">静置</text>
+            <text x="300" y="232">→</text>
+            <text x="340" y="232" fill="#6fd3e6">悬浮并加速</text>
+            <text x="480" y="232">→</text>
+            <text x="520" y="232" fill="#5fd0a8">匀速悬浮</text>
+            <text x="40" y="264">人员状态：</text>
+            <text x="160" y="264" fill="#5b9dff">安检通过·已就座</text>
+            <text x="340" y="264" fill="#6fd3e6">承受加速</text>
+            <text x="520" y="264" fill="#5fd0a8">自由活动</text>
+          </g>
+        </svg>
+        <figcaption>时间轴 · 六个阶段、三层状态同步变化</figcaption>
+      </figure>
+
+      <h3><span class="no">3.2</span>逐段叙述</h3>      <div class="tbl">
+        <table>
+          <caption>场景各阶段与 ODC 条件</caption>
+          <thead><tr><th>阶段</th><th>发生了什么</th><th>关键 ODC 条件</th><th>涉及层</th></tr></thead>
+          <tbody>
+            <tr><td class="id">S1 进站</td><td>安检、实名核验、行李检查；调度确认舱体与目标管段状态</td><td>舱体可用、目标管段真空正常、人员安检通过</td><td>L4 L6</td></tr>
+            <tr><td class="id">S2 气闸进舱</td><td>进入对接舱，双门互锁，压力平衡后登舱、系约束</td><td>对接到位、压力平衡、闸门状态正常</td><td>L2 L4</td></tr>
+            <tr><td class="id">S3 直线加速</td><td>脱离站台进入加速段，直线电机分段接力加速至巡航速度；按 1g 计，千公里级约需 4 km</td><td>加速度不超舒适阈值、段内无其他舱体</td><td>L1 L5</td></tr>
+            <tr><td class="id">S4 干线巡航</td><td>真空中匀速运行，连续穿越多个隔离段，跨洲调度持续追踪</td><td>真空稳定、闸门全部可用、通信正常</td><td>L1 L5 L6</td></tr>
+            <tr><td class="id">S5 减速进站</td><td>目标站前减速，转入站点隔离段</td><td>目标段已清空、闸门动作正常</td><td>L1 L3</td></tr>
+            <tr><td class="id">S6 出舱</td><td>停稳后气闸开闭，乘客下舱出站</td><td>舱停稳、压力平衡、疏散通道畅通</td><td>L2 L4</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="note">
+        <b>为什么选它</b>：覆盖了这个系统几乎全部核心控制行为（气闸、加速、隔离、调度）与三类 ODC 条件；
+        风险分析结果对货运与科研窗口场景具有复用价值。
+      </p>
+
+      <h3><span class="no">3.3</span>关键量化约束（需对齐外部规范）</h3>
+      <div class="tbl">
+        <table>
+          <caption>本场景涉及的可量化约束与依据</caption>
+          <thead><tr><th>约束</th><th>取值</th><th>依据</th></tr></thead>
+          <tbody>
+            <tr><td><b>站台疏散时间</b></td><td>一列车最大载客 + 站台候车乘客在 6 min 内撤离至安全区</td><td>GB 50490-2009 §7.3.2（轨道交通通行做法，本项目类比采用）</td></tr>
+            <tr><td><b>疏散通道间距</b></td><td>相邻联络通道间距 ≤ 600 m</td><td>GB 50490-2009 §7.3.22（单线区间隧道做法）</td></tr>
+            <tr><td><b>加速段距离</b></td><td>按 1g、千公里级约 3.9 km；四千公里级约 63 km</td><td>本站作业一「直线加速段」计算</td></tr>
+            <tr><td><b>乘客加速度</b></td><td>不超过舒适阈值（概念阶段取 1g 量级）</td><td>作业三 SyRS-6-01</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note warn">
+        <b>需要说明的差异</b>：GB 50490 的 600 m 联络通道间距是为<b>有人值守、可横向疏散</b>的轨道交通隧道设定的。
+        本项目的管段内是<b>真空 + 高速运行</b>，舱体不能随时开门横向疏散，因此 600 m 不能直接照搬，
+        只能作为"疏散设施密度的量级参照"。本项目实际需要的疏散方式（舱体自带逃生、段内破真空后进入）与对应的间距，
+        须在后续设计阶段重新论证——这正是本页把它标为"待论证"而不是"已确定"的原因。
+      </p>
+    </section>
+
+    <!-- 04 风险场景 -->
+    <section class="sec" id="risk">
+      <p class="label"><i>04</i> 安全风险分析 / RISK</p>
+      <h2>风险场景列表</h2>
+      <p>
+        对六个阶段逐一追问"哪一步出错会危及安全"，结合作业三的 UCA 与作业一的技术设定，形成风险场景列表。
+      </p>
+
+      <div class="tbl">
+        <table>
+          <caption>风险场景（RS）· 阶段 · 触发条件 · 后果 · 关联层 · 关联 UCA · 安全需求</caption>
+          <thead><tr><th>编号</th><th>阶段</th><th>触发条件</th><th>潜在后果</th><th>层</th><th>UCA</th><th>SR-S</th></tr></thead>
+          <tbody>
+            <tr><td class="id">RS-01</td><td>S2</td><td>对接未完成但气闸被指令开启</td><td>站点与真空段间失压</td><td>L2</td><td>UCA-7</td><td>SR-S-07</td></tr>
+            <tr><td class="id">RS-02</td><td>S3</td><td>舱体接近最小安全间距仍在加速</td><td>追尾、结构破坏</td><td>L4</td><td>UCA-4</td><td>SR-S-04</td></tr>
+            <tr><td class="id">RS-03</td><td>S3/S4</td><td>真空数据因传感漂移显示正常，实际已劣化</td><td>高速进入低真空区，气动与热载荷异常</td><td>L6</td><td>UCA-5 / 9</td><td>SR-S-05 / 09</td></tr>
+            <tr><td class="id">RS-04</td><td>S4</td><td>漏率超标但闸门未及时闭合</td><td>失压扩散到相邻段</td><td>L1 L6</td><td>UCA-2 / 3</td><td>SR-S-02 / 03</td></tr>
+            <tr><td class="id">RS-05</td><td>S4</td><td>舱体正通过隔离段时闸门被指令闭合</td><td>撞击闸门，人员伤亡</td><td>L1</td><td>UCA-1</td><td>SR-S-01</td></tr>
+            <tr><td class="id">RS-06</td><td>S4</td><td>已判降级但封段指令延迟</td><td>进入异常区段</td><td>L6</td><td>UCA-6</td><td>SR-S-06</td></tr>
+            <tr><td class="id">RS-07</td><td>S4</td><td>供电或冷却中断，悬浮提前失效</td><td>舱体失控，结构损伤</td><td>L6</td><td>UCA-8</td><td>SR-S-08</td></tr>
+            <tr><td class="id">RS-08</td><td>S4</td><td>地层位移超出柔性接头吸收能力</td><td>管段断裂、失压</td><td>L5</td><td>外部越界</td><td>需补充：结构安全</td></tr>
+            <tr><td class="id">RS-09</td><td>S5</td><td>目标段未清空即下令进站</td><td>与站内舱体冲突</td><td>L3 L4</td><td>UCA-6 变体</td><td>SR-S-05 扩展</td></tr>
+            <tr><td class="id">RS-10</td><td>S6</td><td>舱体未停稳即开启出舱门</td><td>人员跌落或夹伤</td><td>L4</td><td>UCA-7 变体</td><td>SR-S-07 扩展</td></tr>
+            <tr><td class="id">RS-11</td><td>S4</td><td>海底段散热不畅导致管壁温度异常</td><td>结构热应力、局部失稳</td><td>L5</td><td>外部越界</td><td>需补充：热管理安全</td></tr>
+            <tr><td class="id">RS-12</td><td>S1–S6</td><td>天窗检修期间误发发车指令</td><td>舱体与作业人员/设备冲突</td><td>L3 L4</td><td>UCA-5 变体</td><td>SR-S-05 扩展</td></tr>
+            <tr><td class="id">RS-13</td><td>S4</td><td>管段中部失压或失火，舱体无法横向疏散</td><td>疏散超时（6 min 基准），人员伤亡</td><td>L1 L2 L4</td><td>新增</td><td>需补充：疏散安全</td></tr>
+            <tr><td class="id">RS-14</td><td>S1–S6</td><td>跨境口岸关闭，舱体滞留途中超时</td><td>人员滞留、货物失温、合同违约</td><td>L2 L3</td><td>新增</td><td>需补充：跨境应急</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3><span class="no">4.1</span>风险分级</h3>
+      <div class="tbl">
+        <table>
+          <caption>按"后果严重度 × 可能性"定性分级（概念阶段）</caption>
+          <thead><tr><th>等级</th><th>判定标准</th><th>本场景中的例子</th></tr></thead>
+          <tbody>
+            <tr><td><b>高</b></td><td>可能导致人员伤亡</td><td>RS-01、RS-02、RS-05、RS-07、RS-12、RS-13</td></tr>
+            <tr><td><b>中</b></td><td>可能导致设备严重损毁或线路中断</td><td>RS-03、RS-04、RS-06、RS-08、RS-11、RS-14</td></tr>
+            <tr><td><b>低</b></td><td>可能导致运营中断或轻伤</td><td>RS-09、RS-10</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3><span class="no">4.2</span>分析结论</h3>
+      <ul class="pts">
+        <li><b>风险集中在控制回路</b>：十四条风险中八条源于"控制器在错误信息或错误时机下动作"，
+          而不是设备失效——这正是作业三用 STPA 而非纯 FMEA 的理由。</li>
+        <li><b>四条是新增的"环境越界"类风险</b>：RS-08（地质位移超限）、RS-11（海底散热不畅）、
+          RS-13（疏散能力不足）、RS-14（跨境滞留）不属于控制行为错误，而是 ODC 越界或外部条件突变本身，
+          说明<b>条件越界是一个独立的失效源</b>，需补充结构安全、热管理安全、疏散安全与跨境应急四类需求。</li>
+        <li><b>隔离段是风险边界</b>：多数风险影响范围被隔离闸门限制在单段内，
+          闸门密度直接决定"最坏损失"的上限——这是作业二中"闸门密度"冲突需求的量化依据。</li>
+        <li><b>天窗冲突是过渡期特有风险</b>：RS-12 来自作业一的分期建设设计，一期示范段试运行与二期衔接期间，
+          既有运营又有施工，风险聚集在 L3 临时变更层。</li>
+      </ul>
+
+      <p class="note danger">
+        <b>边界说明</b>：本分析为概念阶段的定性推演，用于识别风险与提出需求，不构成正式安全评估；
+        严重度与可能性分级基于小组讨论的定性判断，未做定量概率估算。
+      </p>
+    </section>
+
+    <!-- 05 场景清单 -->
+    <section class="sec" id="scenes">
+      <p class="label"><i>05</i> 场景清单 / SCENARIO LIST</p>
+      <h2>分层 × 抽象后的场景集合</h2>
+      <p>
+        场景分层的最终产出不是一张表，而是一组<strong>可枚举、可追溯</strong>的场景。
+        下面把前面各層的要素组合起来，给出七条场景，并对每条标注所覆盖的层、评估方式与优先级。
+      </p>
+
+      <div class="tbl">
+        <table>
+          <caption>场景清单（SCN）· 触发条件 · 期望结果 · 覆盖层 · 优先级</caption>
+          <thead><tr><th>编号</th><th>场景</th><th>触发条件</th><th>期望结果</th><th>覆盖层</th><th>优先级</th></tr></thead>
+          <tbody>
+            <tr><td class="id">SCN-01</td><td>正常运营日</td><td>全部 ODC 满足，按时刻表发车</td><td>准点、真空稳定、无越界告警</td><td>全层</td><td>高</td></tr>
+            <tr><td class="id">SCN-02</td><td>科研窗口切换</td><td>客运结束后预约真空段</td><td>切换 60 min 内完成，指标达标</td><td>L2 L3 L6</td><td>中</td></tr>
+            <tr><td class="id">SCN-03</td><td>单段失压</td><td>某隔离段漏率超限</td><td>闸门闭合，相邻段维持运行</td><td>L1 L6</td><td>高</td></tr>
+            <tr><td class="id">SCN-04</td><td>舱体悬浮失效</td><td>悬浮间隙越限或供电中断</td><td>备份悬浮或受控停稳，后方减速</td><td>L4 L6</td><td>高</td></tr>
+            <tr><td class="id">SCN-05</td><td>通信中断</td><td>调度—区段控制链路断</td><td>转本地控制，安全功能不受影响</td><td>L6</td><td>高</td></tr>
+            <tr><td class="id">SCN-06</td><td>跨境口岸关闭</td><td>过境国暂停通行</td><td>舱体就近停靠，封志保持，旅客安置</td><td>L2 L3 L4</td><td>中</td></tr>
+            <tr><td class="id">SCN-07</td><td>站台紧急疏散</td><td>火灾或气闸故障，需全员撤离</td><td>按 6 min 疏散基准完成撤离</td><td>L2 L4</td><td>高</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="cite">疏散时间基准参照 [4] GB 50490-2009 §7.3.2；场景划分与优先级为本项目自行确定。</p>
+    </section>
+
+    <!-- 05 参考资料 -->
+    <section class="sec" id="bib">
+      <p class="label"><i>05</i> 参考资料 / REFERENCES</p>
+      <h2>引用来源</h2>
+      <p>本页的方法、定义与框架，来源如下。访问日期：2026 年 11 月。</p>
+
+      <ol class="bib">
+        <li>课程课件：《7-基于场景的系统工程-复杂系统工程2026》，张玉新，2026。
+          第 18–20 页给出 ODD / ODC 定义，第 21 页给出场景分层六层结构，第 120 页为作业 4 要求。
+          本页的分层框架与 ODC 三要素均取自该课件。
+        </li>
+        <li>ISO 34501:2022, <i>Road vehicles — Test scenarios for automated driving systems — Vocabulary</i>.
+          场景四级抽象（功能场景 / 抽象场景 / 逻辑场景 / 具体场景）。该标准由我国牵头制定，2022 年 10 月发布。
+          <a href="https://www.mei.net.cn/qcgy/202210/1665987853.html">工信部发布消息（机经网转载）</a>
+          （标准为付费文档，仅按条款概念引用）
+        </li>
+        <li>ISO 34502:2022, <i>Road vehicles — Test scenarios for automated driving systems — Scenario based safety evaluation framework</i>.
+          基于场景的安全评价框架。仅按标准编号引用。
+        </li>
+        <li>ISO 21448:2022, <i>Road vehicles — Safety of the intended functionality (SOTIF)</i>.
+          预期功能安全；课件第 61–62 页在"高风险场景识别"中引用。仅按标准编号引用。
+        </li>
+        <li>GB 50490-2009《城市轨道交通技术规范》.
+          第 7.3.2 条：事故或灾难时应保证一列进站列车的预测最大载客量及站台候车乘客在 <b>6 min</b> 内撤离到安全区；
+          第 7.3.22 条：两条单线区间隧道之间应设联络通道，相邻两个联络通道间距不应大于 <b>600 m</b>。
+          本页把这两条作为疏散与通道密度的量级参照，并说明与真空高速管道场景的差异。
+          <a href="http://m.jianbiaoku.com/webarbs/book/16098/434365.shtml">条文原文（建标库）</a>
+        </li>
+        <li>本站《作业一 · 系统构想与层级分解》. <a href="./hw1.html">hw1.html</a> ——
+          本页的管廊分层、隔离闸门、胶囊、分期建设、真空维持、热管理等设定均取自该页。
+        </li>
+        <li>本站《作业三 · 系统需求、架构定义与安全分析》. <a href="./hw3.html">hw3.html</a> ——
+          RS-01～RS-12 与 UCA-1～UCA-9、SR-S-01～SR-S-09 逐条对应。
+        </li>
+        <li>Foretellix, "How to get more out of your logical scenarios?"（2022，更新于 2022-12-08）.
+          对 ASAM OpenSCENARIO 与 ISO 34501 四级抽象层次的工程解释：具体场景只允许属性定值，
+          逻辑场景允许指定范围内取值，抽象场景允许任意约束，功能场景面向人不面向机器。
+          <a href="https://www.foretellix.com/how-do-you-get-more-out-of-your-logical-scenarios-and-how-do-abstract-scenarios-take-productivity-and-safety-to-a-new-level/">foretellix.com</a>
+        </li>
+      </ol>
+
+      <p class="note">
+        <b>口径说明</b>：一、标准为付费文档，本页只引用编号与概念定义，未复制标准原文；
+        二、课程原始案例面向自动驾驶，本页是把同一套方法迁移到管道运输系统，
+        迁移映射（道路→管廊、车辆→舱体、驾驶员→调度员与乘客）为小组自行设计；
+        三、本页风险分析为概念阶段定性推演，不是正式安全评估。
+      </p>
+    </section>
+
+    <footer class="end">
+      <p>作业四 · 2026 · 场景分层 / 运行设计条件 / 典型场景 / 风险场景</p>
+      <p><a href="./project.html">← 返回项目主页</a> ｜ <a href="./hw1.html">作业一</a> ｜ <a href="./hw2.html">作业二</a> ｜ <a href="./hw3.html">作业三</a> ｜ <a href="./index.html">个人主页</a></p>
+    </footer>
+  </div>
+
+  <script>
+    (function () {
+      var links = Array.prototype.slice.call(document.querySelectorAll('.nav a.item'));
+      var secs = links.map(function (a) { return document.querySelector(a.getAttribute('href')); });
+      function setActive(id) {
+        links.forEach(function (a) { a.classList.toggle('active', a.getAttribute('href') === '#' + id); });
+      }
+      if ('IntersectionObserver' in window) {
+        var io = new IntersectionObserver(function (entries) {
+          entries.forEach(function (e) { if (e.isIntersecting) setActive(e.target.id); });
+        }, { rootMargin: '-40% 0px -52% 0px', threshold: 0 });
+        secs.forEach(function (s) { if (s) io.observe(s); });
+      }
+      links.forEach(function (a) {
+        a.addEventListener('click', function (e) {
+          var id = a.getAttribute('href').slice(1);
+          var t = document.getElementById(id);
+          if (!t) return;
+          e.preventDefault();
+          var top = t.getBoundingClientRect().top + window.pageYOffset - 58;
+          window.scrollTo({ top: top, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+          if (history.replaceState) history.replaceState(null, '', '#' + id);
+          setActive(id);
+        });
+      });
+      var reveals = document.querySelectorAll('.reveal');
+      if ('IntersectionObserver' in window) {
+        var ro = new IntersectionObserver(function (entries) {
+          entries.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('in'); ro.unobserve(e.target); } });
+        }, { rootMargin: '0px 0px -8% 0px', threshold: 0.05 });
+        reveals.forEach(function (el) { ro.observe(el); });
+      } else {
+        reveals.forEach(function (el) { el.classList.add('in'); });
+      }
+    })();
+  </script>
+</body>
+</html>
