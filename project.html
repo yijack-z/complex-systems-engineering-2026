@@ -124,6 +124,25 @@
   .task .go { display: inline-block; margin-top: 16px; font-size: 12px; letter-spacing: .16em; color: var(--green); }
   .task:hover .go { color: #9cf0cf; }
 
+        /* 放映入口卡片：与其他作业卡区分 */
+        .task.deck {
+          margin: 26px 0 4px;
+          border-color: rgba(111,211,230,.42);
+          background:
+            linear-gradient(115deg, rgba(111,211,230,.10), rgba(91,157,255,.05) 55%, transparent 100%),
+            rgba(255,255,255,.022);
+          position: relative; overflow: hidden;
+        }
+        .task.deck::before {
+          content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+          background: linear-gradient(180deg, var(--cyan), var(--blue));
+        }
+        .task.deck:hover { border-color: rgba(111,211,230,.85); transform: translateY(-2px); }
+        .task.deck .no { color: var(--cyan); }
+        .task.deck .go { color: var(--cyan); }
+        .task.deck:hover .go { color: #b6f4ff; }
+        .task.deck .desc b { color: var(--ink); font-weight: 600; }
+
   .end { position: relative; z-index: 1; padding: 44px 0 54px; border-top: 1px solid var(--line);
          font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em; color: var(--muted); }
   .end p { margin: 0 0 8px; }
@@ -208,6 +227,20 @@
       <p class="label"><i>02</i> 分类任务 / ASSIGNMENTS</p>
       <h2>作业归档</h2>
       <p>每份作业单独一页，按分层目录组织，可从上到下滚动阅读。</p>
+
+      <!-- 结课汇报幻灯片 -->
+      <a class="task deck" href="./presentation.html">
+        <div class="row">
+          <span class="no">课程汇报</span>
+          <span class="t">结课汇报幻灯片</span>
+          <span class="date">22 页</span>
+        </div>
+        <p class="desc">
+          双人汇报的完整幻灯片，点击即可全屏放映。每页与下方四个作业页一一对应。
+        </p>
+        <div class="tags"><span>22 页</span><span>全屏放映</span><span>逐页引用</span></div>
+        <span class="go">开始放映 →</span>
+      </a>
 
       <div class="tasks">
         <a class="task" href="./hw1.html">
